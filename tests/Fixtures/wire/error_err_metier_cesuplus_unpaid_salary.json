@@ -1,0 +1,5 @@
+{
+    "code": "ERR_METIER",
+    "message": "Une erreur métier cesu+ est survenue",
+    "description": "Présence d'un impayé sur salaire sur le compte employeur. Il est impossible de réaliser de déclaration Cesu+ sur ce compte."
+}

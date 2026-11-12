@@ -1,0 +1,9 @@
+{
+    "inscrit": true,
+    "etatCompteEnLigne": "actif",
+    "etatMandatSepa": "actif",
+    "mandatPresent": true,
+    "etatCesuPlus": "active",
+    "motifBlocageCesuPlus": "C00",
+    "etatAICI": true
+}

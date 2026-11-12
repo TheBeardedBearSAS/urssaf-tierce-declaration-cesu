@@ -1,0 +1,23 @@
+{
+    "codeCivilite": "1",
+    "adresseEmploi": {
+        "numVoie": 12,
+        "lettreVoie": "B",
+        "typeVoie": "R",
+        "libelleVoie": "De la Paix",
+        "complementLocalisation": "Batiment C",
+        "lieuDit": "",
+        "codeCommune": "69383",
+        "codePostal": "69003"
+    },
+    "nom": "Dupond",
+    "prenom": "Pierre",
+    "dateNaissance": "1975-01-30",
+    "email": "pierre.durand@example.com",
+    "telephone": "0412345678",
+    "rib": {
+        "iban": "FR7630001007941234567890185",
+        "bic": "BDFEFRPPCCT",
+        "mandatSepa": true
+    }
+}

@@ -1,0 +1,5 @@
+{
+    "code": "ERR_METIER",
+    "message": " Une erreur métier est survenue",
+    "description": "Veuillez indiquer un IBAN valide."
+}

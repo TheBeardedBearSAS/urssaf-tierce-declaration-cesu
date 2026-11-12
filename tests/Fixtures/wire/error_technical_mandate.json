@@ -1,0 +1,5 @@
+{
+    "code": "ERREUR_TECHNIQUE",
+    "message": "Une erreur technique est survenue",
+    "description": "Impossible de joindre le service cesu afin de vérifier l'existence du compte fourni"
+}

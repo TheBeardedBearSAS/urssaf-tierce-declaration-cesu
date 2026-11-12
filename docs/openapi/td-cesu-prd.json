@@ -1,0 +1,1583 @@
+{
+  "swagger" : "2.0",
+  "info" : {
+    "description" : "L'API Tierce Declaration Cesu permet, pour le compte d'un particulier employeur et en qualite de tiers-declarant, d'acceder au service d'inscription a l'offre simplifiee Cesu, d'activer le service Cesu+ pour un particulier employeur et son salarie, d'activer le service d'avance immediate de credit d'impot pour le particulier employeur, d'obtenir les montants des cotisations et des contributions sociales pour une activite relevant du Cesu, de declarer le salaire verse a un salarie par le particulier employeur aupres des organismes de recouvrement concernes et de proceder a la retenue a la source prevue a l'article 204A du code general des impots.<br>Dans le cas ou le service Cesu+ est active pour un couple particulier employeur/salarie, l'API Tierce Declaration Cesu permet, pour le compte d'un particulier employeur, de realiser des declarations Cesu+ et de proceder au versement du salaire declare au salarie. Si le service d'avance immediate de credit d'impot est active et uniquement pour les declarations Cesu+, cette avance immediate est deduite du montant a regler par le particulier employeur.",
+    "version" : "2.0.0",
+    "title" : "API Tierce Declaration CESU",
+    "contact" : {
+      "name" : "Support JIRA ASE",
+      "url" : "https://acoss-dsi.atlassian.net/servicedesk/customer/portal/2"
+    }
+  },
+  "host" : "api.urssaf.fr",
+  "basePath" : "/tiersdecl/v1/cesu",
+  "tags" : [ {
+    "name" : "Au sujet des PE",
+    "description" : "Tout au sujet des Particulier Employeur (PE) inscrit au service CESU"
+  }, {
+    "name" : "Au sujet des SP",
+    "description" : "Tout au sujet des Salaries (SP) inscrit au service CESU"
+  }, {
+    "name" : "Mandat TD",
+    "description" : "Gestion des mandats de Tiece Declaration"
+  } ],
+  "schemes" : [ "https" ],
+  "produces" : [ "application/json" ],
+  "security" : [ {
+    "securitySchemes" : [ "tiersdecl.cesu" ]
+  } ],
+  "paths" : {
+    "/employeurs" : {
+      "post" : {
+        "tags" : [ "Au sujet des PE" ],
+        "summary" : "Methode CESU010 - Inscription PE au regime CESU",
+        "description" : "Ce service permet d'inscrire un particulier employeur au regime CESU et de l'habiliter aux services de Tierce Declaration. L'individu devra activer son compte pour qu'il soit utilisable.",
+        "operationId" : "inscriptionPeCesu",
+        "consumes" : [ "application/json" ],
+        "parameters" : [ {
+          "in" : "body",
+          "name" : "input",
+          "description" : "Informations a saisir afin d'inscrire un nouveau PE au service CESU",
+          "required" : true,
+          "schema" : {
+            "$ref" : "#/definitions/InputInscriptionPe"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Inscription enregistree",
+            "schema" : {
+              "$ref" : "#/definitions/OutputInscriptionPe"
+            }
+          },
+          "400" : {
+            "description" : "Requete incorrecte ou erreur fonctionnelle",
+            "schema" : {
+              "$ref" : "#/definitions/Erreur"
+            }
+          },
+          "401" : {
+            "description" : "Token d'authentification absent ou invalide"
+          },
+          "403" : {
+            "description" : "Authentification refusee"
+          },
+          "500" : {
+            "description" : "Erreur technique",
+            "schema" : {
+              "$ref" : "#/definitions/Erreur"
+            }
+          },
+          "512" : {
+            "description" : "Erreur d'authentification"
+          }
+        }
+      }
+    },
+    "/employeurs/{numeroCesu}" : {
+      "get" : {
+        "tags" : [ "Au sujet des PE" ],
+        "summary" : "Methode CESU020 - Verification compte CESU PE",
+        "description" : "Ce service permet de verifier que l'individu identifie par son numero CESU et sa date de naissance possede bien un compte CESU PE.",
+        "operationId" : "verificationPeCesu",
+        "parameters" : [ {
+          "name" : "numeroCesu",
+          "in" : "path",
+          "description" : "Numero CESU de l'employeur. Chaine alphanumerique sur 14 caracteres.",
+          "required" : true,
+          "type" : "string",
+          "maxLength" : 14,
+          "minLength" : 14
+        }, {
+          "name" : "dateNaissance",
+          "in" : "query",
+          "description" : "Date de naissance de l'employeur recherche. Format : 'YYYY-MM-DD'",
+          "required" : true,
+          "type" : "string",
+          "pattern" : "([0-9]{4})-(?:[0-9]{2})-([0-9]{2})",
+          "format" : "date"
+        }, {
+          "name" : "numeroCesuSala",
+          "in" : "query",
+          "description" : "Numero CESU du salarie (numero interne au CESU identifiant le salarie). Ce champ alphanumerique sur 14 caracteres est obligatoire en l'absence de NIR et de donnees administratives du salarie (nom de naissance, prenom, date de naissance, ville de naissance, pays de naissance).",
+          "required" : false,
+          "type" : "string",
+          "maxLength" : 14,
+          "minLength" : 14
+        }, {
+          "name" : "nirSala",
+          "in" : "query",
+          "description" : "Numero de securite sociale du salarie. Ce champ, sur 15 caracteres, est obligatoire en l'absence de numero CESU et de donnees administratives du salarie (nom de naissance, prenom, date de naissance, ville de naissance, pays de naissance).",
+          "required" : false,
+          "type" : "string"
+        }, {
+          "name" : "prenomSala",
+          "in" : "query",
+          "description" : "Prenom du salarie. Ce champ alphabetique sur 30 caracteres maximum est obligatoire en l'absence de numero CESU et de NIR.",
+          "required" : false,
+          "type" : "string"
+        }, {
+          "name" : "nomNaissanceSala",
+          "in" : "query",
+          "description" : "Nom de naissance du salarie. Ce champ alphabetique sur 30 caracteres maximum est obligatoire en l'absence de numero CESU et de NIR.",
+          "required" : false,
+          "type" : "string"
+        }, {
+          "name" : "nomUsageSala",
+          "in" : "query",
+          "description" : "Nom d'usage du salarie. Ce champ alphabetique sur 30 caracteres maximum est facultatif et sera utilise en l'absence de numero CESU et de NIR.",
+          "required" : false,
+          "type" : "string"
+        }, {
+          "name" : "dateNaissanceSala",
+          "in" : "query",
+          "description" : "Date de naissance du salarie. Ce champ est obligatoire en l'absence de numero CESU et de NIR. Format : 'YYYY-MM-DD'",
+          "required" : false,
+          "type" : "string",
+          "pattern" : "([0-9]{4})-(?:[0-9]{2})-([0-9]{2})",
+          "format" : "date"
+        }, {
+          "name" : "departementNaissanceSala",
+          "in" : "query",
+          "description" : "Departement de naissance du salarie. Ce champ sur 3 caracteres maximum (ex: 972 ou 07) sera utilise en l'absence de numero CESU et de NIR et est obligatoire si le salarie est ne en France.",
+          "required" : false,
+          "type" : "string"
+        }, {
+          "name" : "villeNaissanceSala",
+          "in" : "query",
+          "description" : "Ville de naissance du salarie. Ce champ alphabetique sur 30 caracteres maximum est obligatoire en l'absence de numero CESU et de NIR.",
+          "required" : false,
+          "type" : "string"
+        }, {
+          "name" : "codePaysNaissanceSala",
+          "in" : "query",
+          "description" : "Code INSEE du pays de naissance du salarie (ex. FRANCE = 100). Ce champ est obligatoire en l'absence de numero CESU et de NIR.",
+          "required" : false,
+          "type" : "string"
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Compte CESU PE verifie",
+            "schema" : {
+              "$ref" : "#/definitions/OutputVerificationPe"
+            }
+          },
+          "400" : {
+            "description" : "Requete incorrecte ou erreur fonctionnelle",
+            "schema" : {
+              "$ref" : "#/definitions/Erreur"
+            }
+          },
+          "401" : {
+            "description" : "Token d'authentification absent ou invalide"
+          },
+          "403" : {
+            "description" : "Authentification refusee"
+          },
+          "500" : {
+            "description" : "Erreur technique",
+            "schema" : {
+              "$ref" : "#/definitions/Erreur"
+            }
+          },
+          "512" : {
+            "description" : "Erreur d'authentification"
+          }
+        }
+      }
+    },
+    "/salaries" : {
+      "get" : {
+        "tags" : [ "Au sujet des SP" ],
+        "summary" : "Methode CESU021 - Verification compte CESU SP",
+        "description" : "Ce service permet de rechercher dans le referentiel salarie du CESU si l'individu identifie par les donnees en entree existe.",
+        "operationId" : "verificationSpCesu",
+        "parameters" : [ {
+          "name" : "numeroCesu",
+          "in" : "query",
+          "description" : "Numero CESU du salarie (numero interne au CESU identifiant le salarie). Ce champ alphanumerique sur 14 caracteres est obligatoire en l'absence de NIR et de donnees administratives du salarie (nom de naissance, prenom, date de naissance, ville de naissance, pays de naissance).",
+          "required" : false,
+          "type" : "string",
+          "maxLength" : 14,
+          "minLength" : 14
+        }, {
+          "name" : "nir",
+          "in" : "query",
+          "description" : "Numero de securite sociale du salarie. Ce champ, sur 15 caracteres, est obligatoire en l'absence de numero CESU et de donnees administratives du salarie (nom de naissance, prenom, date de naissance, ville de naissance, pays de naissance).",
+          "required" : false,
+          "type" : "string"
+        }, {
+          "name" : "prenom",
+          "in" : "query",
+          "description" : "Prenom du salarie. Ce champ alphabetique sur 30 caracteres maximum est obligatoire en l'absence de numero CESU et de NIR.",
+          "required" : false,
+          "type" : "string"
+        }, {
+          "name" : "nomNaissance",
+          "in" : "query",
+          "description" : "Nom de naissance du salarie. Ce champ alphabetique sur 30 caracteres maximum est obligatoire en l'absence de numero CESU et de NIR.",
+          "required" : false,
+          "type" : "string"
+        }, {
+          "name" : "nomUsage",
+          "in" : "query",
+          "description" : "Nom d'usage du salarie. Ce champ alphabetique sur 30 caracteres maximum est facultatif et sera utilise en l'absence de numero CESU et de NIR.",
+          "required" : false,
+          "type" : "string"
+        }, {
+          "name" : "dateNaissance",
+          "in" : "query",
+          "description" : "Date de naissance du salarie. Ce champ est obligatoire en l'absence de numero CESU et de NIR. Format : 'YYYY-MM-DD'",
+          "required" : false,
+          "type" : "string",
+          "pattern" : "([0-9]{4})-(?:[0-9]{2})-([0-9]{2})",
+          "format" : "date"
+        }, {
+          "name" : "departementNaissance",
+          "in" : "query",
+          "description" : "Departement de naissance du salarie. Ce champ sur 3 caracteres maximum (ex: 972 ou 07) sera utilise en l'absence de numero CESU et de NIR et est obligatoire si le salarie est ne en France.",
+          "required" : false,
+          "type" : "string"
+        }, {
+          "name" : "villeNaissance",
+          "in" : "query",
+          "description" : "Ville de naissance du salarie. Ce champ alphabetique sur 30 caracteres maximum est obligatoire en l'absence de numero CESU et de NIR.",
+          "required" : false,
+          "type" : "string"
+        }, {
+          "name" : "codePaysNaissance",
+          "in" : "query",
+          "description" : "Code INSEE du pays de naissance du salarie (ex. FRANCE = 100). Ce champ est obligatoire en l'absence de numero CESU et de NIR.",
+          "required" : false,
+          "type" : "string"
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Compte CESU SP verifie",
+            "schema" : {
+              "$ref" : "#/definitions/OutputVerificationSp"
+            }
+          },
+          "400" : {
+            "description" : "Requete incorrecte ou erreur fonctionnelle",
+            "schema" : {
+              "$ref" : "#/definitions/Erreur"
+            }
+          },
+          "401" : {
+            "description" : "Token d'authentification absent ou invalide"
+          },
+          "403" : {
+            "description" : "Authentification refusee"
+          },
+          "500" : {
+            "description" : "Erreur technique",
+            "schema" : {
+              "$ref" : "#/definitions/Erreur"
+            }
+          },
+          "512" : {
+            "description" : "Erreur d'authentification"
+          }
+        }
+      }
+    },
+    "/mandats" : {
+      "post" : {
+        "tags" : [ "Mandat TD" ],
+        "summary" : "Methode CESU030 - Enregistrement de mandat",
+        "description" : "Ce service permet de notifier l'URSSAF sur l'enregistrement d'un mandat de tiers declarant obtenu par la plateforme pour ce PE.",
+        "operationId" : "enregistrerMandatCesu",
+        "consumes" : [ "application/json" ],
+        "parameters" : [ {
+          "name" : "numeroCesu",
+          "in" : "query",
+          "description" : "Numero CESU de l'employeur. Chaine alphanumerique sur 14 caracteres.",
+          "required" : true,
+          "type" : "string",
+          "maxLength" : 14,
+          "minLength" : 14
+        }, {
+          "name" : "dateNaissance",
+          "in" : "query",
+          "description" : "Date de naissance de l'employeur. Format : 'YYYY-MM-DD'",
+          "required" : true,
+          "type" : "string",
+          "pattern" : "([0-9]{4})-(?:[0-9]{2})-([0-9]{2})",
+          "format" : "date"
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Mandat ajoute"
+          },
+          "400" : {
+            "description" : "Compte inconnu, requete incorrecte ou erreur fonctionnelle",
+            "schema" : {
+              "$ref" : "#/definitions/Erreur"
+            }
+          },
+          "401" : {
+            "description" : "Token d'authentification absent ou invalide"
+          },
+          "403" : {
+            "description" : "Authentification refusee"
+          },
+          "500" : {
+            "description" : "Erreur technique",
+            "schema" : {
+              "$ref" : "#/definitions/Erreur"
+            }
+          }
+        }
+      },
+      "delete" : {
+        "tags" : [ "Mandat TD" ],
+        "summary" : "Methode CESU031 - Annulation de mandat",
+        "description" : "Ce service permet de notifier l'URSSAF sur l'annulation d'un mandat de tiers declarant obtenu par la plateforme pour ce PE.",
+        "operationId" : "annulerMandatCesu",
+        "parameters" : [ {
+          "name" : "numeroCesu",
+          "in" : "query",
+          "description" : "Numero CESU de l'employeur. Chaine alphanumerique sur 14 caracteres.",
+          "required" : true,
+          "type" : "string",
+          "maxLength" : 14,
+          "minLength" : 14
+        }, {
+          "name" : "dateNaissance",
+          "in" : "query",
+          "description" : "Date de naissance de l'employeur. Format : 'YYYY-MM-DD'",
+          "required" : true,
+          "type" : "string",
+          "pattern" : "([0-9]{4})-(?:[0-9]{2})-([0-9]{2})",
+          "format" : "date"
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Mandat annule"
+          },
+          "400" : {
+            "description" : "Compte inconnu, requete incorrecte ou erreur fonctionnelle",
+            "schema" : {
+              "$ref" : "#/definitions/Erreur"
+            }
+          },
+          "401" : {
+            "description" : "Token d'authentification absent ou invalide"
+          },
+          "403" : {
+            "description" : "Authentification refusee"
+          },
+          "500" : {
+            "description" : "Erreur technique",
+            "schema" : {
+              "$ref" : "#/definitions/Erreur"
+            }
+          }
+        }
+      }
+    },
+    "/estimer" : {
+      "post" : {
+        "tags" : [ "Au sujet des PE" ],
+        "summary" : "Methode CESU040 - Obtention du montant estime des cotisations sociales",
+        "description" : "Permet de simuler le montant de cotisations sociales pour une activite CESU.",
+        "operationId" : "estimerCotisationsCesu",
+        "consumes" : [ "application/json" ],
+        "parameters" : [ {
+          "in" : "body",
+          "name" : "input",
+          "required" : true,
+          "schema" : {
+            "$ref" : "#/definitions/InputEstimation"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Calcul du montant estime de cotisations sociales effectue",
+            "schema" : {
+              "$ref" : "#/definitions/OutputEstimation"
+            }
+          },
+          "400" : {
+            "description" : "requete incorrecte ou erreur fonctionnelle",
+            "schema" : {
+              "$ref" : "#/definitions/Erreur"
+            }
+          },
+          "401" : {
+            "description" : "Token d'authentification absent ou invalide"
+          },
+          "403" : {
+            "description" : "Authentification refusee"
+          },
+          "500" : {
+            "description" : "Erreur technique",
+            "schema" : {
+              "$ref" : "#/definitions/Erreur"
+            }
+          },
+          "512" : {
+            "description" : "Erreur d'authentification"
+          }
+        }
+      }
+    },
+    "/employeurs/{numeroCesu}/declarer" : {
+      "post" : {
+        "tags" : [ "Au sujet des PE" ],
+        "summary" : "Methode CESU050 - Teledeclaration du salaire",
+        "description" : "Permet de declarer le salaire verse a un SP par un PE.",
+        "operationId" : "declarerSalaireCesu",
+        "consumes" : [ "application/json" ],
+        "parameters" : [ {
+          "name" : "numeroCesu",
+          "in" : "path",
+          "description" : "Numero CESU de l'employeur. Chaine alphanumerique sur 14 caracteres.",
+          "required" : true,
+          "type" : "string",
+          "maxLength" : 14,
+          "minLength" : 14
+        }, {
+          "in" : "body",
+          "name" : "declaration",
+          "required" : true,
+          "schema" : {
+            "$ref" : "#/definitions/InputDeclaration"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Declaration effectuee",
+            "schema" : {
+              "$ref" : "#/definitions/OutputDeclaration"
+            }
+          },
+          "400" : {
+            "description" : "Compte inconnu, requete incorrecte ou erreur fonctionnelle",
+            "schema" : {
+              "$ref" : "#/definitions/Erreur"
+            }
+          },
+          "401" : {
+            "description" : "Token d'authentification absent ou invalide"
+          },
+          "403" : {
+            "description" : "Authentification refusee"
+          },
+          "500" : {
+            "description" : "Erreur technique",
+            "schema" : {
+              "$ref" : "#/definitions/Erreur"
+            }
+          },
+          "512" : {
+            "description" : "Erreur d'authentification"
+          }
+        }
+      }
+    },
+    "/employeurs/{numeroCesu}/cesuplus" : {
+      "post" : {
+        "tags" : [ "Au sujet des PE" ],
+        "summary" : "Methode CESU060 - Activation du CESU+",
+        "description" : "Permet l'activation du CESU+.",
+        "operationId" : "activationCesuPlus",
+        "parameters" : [ {
+          "name" : "numeroCesu",
+          "in" : "path",
+          "description" : "Numero de CESU de l'employeur",
+          "required" : true,
+          "type" : "string",
+          "maxLength" : 14,
+          "minLength" : 14
+        }, {
+          "name" : "dateNaissance",
+          "in" : "query",
+          "description" : "Date de naissance de l'employeur. Format : 'YYYY-MM-DD'",
+          "required" : true,
+          "type" : "string",
+          "pattern" : "([0-9]{4})-(?:[0-9]{2})-([0-9]{2})",
+          "format" : "date"
+        }, {
+          "name" : "numeroCesuSalarie",
+          "in" : "query",
+          "description" : "Numero de CESU du salarie",
+          "required" : true,
+          "type" : "string",
+          "maxLength" : 14,
+          "minLength" : 14
+        }, {
+          "name" : "accord",
+          "in" : "query",
+          "description" : "Accord du SP aupres du PE pour l'activation du Cesu+ (false=Le SP n'est pas d'accord ; true=le SP est d'accord).",
+          "required" : true,
+          "type" : "boolean"
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Indicateur d'activation du CESU+",
+            "schema" : {
+              "$ref" : "#/definitions/OutputActivationCesuPlus"
+            }
+          },
+          "400" : {
+            "description" : "Compte inconnu, requete incorrecte ou erreur fonctionnelle",
+            "schema" : {
+              "$ref" : "#/definitions/Erreur"
+            }
+          },
+          "401" : {
+            "description" : "Token d'authentification absent ou invalide"
+          },
+          "403" : {
+            "description" : "Authentification refusee"
+          },
+          "500" : {
+            "description" : "Erreur technique",
+            "schema" : {
+              "$ref" : "#/definitions/Erreur"
+            }
+          },
+          "512" : {
+            "description" : "Erreur d'authentification"
+          }
+        }
+      }
+    },
+    "/employeurs/{numeroCesu}/aici" : {
+      "post" : {
+        "tags" : [ "Au sujet des PE" ],
+        "summary" : "Methode CESU070 - Activation de l'aici",
+        "description" : "Permet l'activation de l'aici.",
+        "operationId" : "activationAici",
+        "consumes" : [ "application/json" ],
+        "parameters" : [ {
+          "name" : "numeroCesu",
+          "in" : "path",
+          "description" : "Numero de CESU de l'employeur",
+          "required" : true,
+          "type" : "string",
+          "maxLength" : 14,
+          "minLength" : 14
+        }, {
+          "in" : "body",
+          "name" : "declaration",
+          "required" : true,
+          "schema" : {
+            "$ref" : "#/definitions/InputActivationAici"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Indicateur d'activation de l'aici'",
+            "schema" : {
+              "$ref" : "#/definitions/OutputActivationAici"
+            }
+          },
+          "400" : {
+            "description" : "Compte inconnu, requete incorrecte ou erreur fonctionnelle",
+            "schema" : {
+              "$ref" : "#/definitions/Erreur"
+            }
+          },
+          "401" : {
+            "description" : "Token d'authentification absent ou invalide"
+          },
+          "403" : {
+            "description" : "Authentification refusee"
+          },
+          "500" : {
+            "description" : "Erreur technique",
+            "schema" : {
+              "$ref" : "#/definitions/Erreur"
+            }
+          },
+          "512" : {
+            "description" : "Erreur d'authentification"
+          }
+        }
+      }
+    }
+  },
+  "securityDefinitions" : {
+    "securitySchemes" : {
+      "type" : "oauth2",
+      "tokenUrl" : "https://api.urssaf.fr/api/oauth/v1/token",
+      "flow" : "application",
+      "scopes" : {
+        "tiersdecl.cesu" : "Acces a l'API Tierce Declaration CESU"
+      }
+    }
+  },
+  "definitions" : {
+    "Adresse" : {
+      "type" : "object",
+      "properties" : {
+        "numVoie" : {
+          "type" : "integer",
+          "format" : "int32",
+          "example" : 20,
+          "description" : "Numero dans la voie",
+          "title" : "Numero dans la voie",
+          "minimum" : 1,
+          "maximum" : 9999
+        },
+        "lettreVoie" : {
+          "type" : "string",
+          "example" : "C",
+          "description" : "Lettre associee au numero dans la voie.",
+          "title" : "Lettre associee au numero dans la voie",
+          "minLength" : 1,
+          "maxLength" : 1
+        },
+        "typeVoie" : {
+          "type" : "string",
+          "example" : "R",
+          "description" : "Code du type de voie. Par exemple, R pour RUE",
+          "title" : "Type de voie",
+          "minLength" : 1,
+          "maxLength" : 3
+        },
+        "libelleVoie" : {
+          "type" : "string",
+          "example" : "Emile Zola",
+          "description" : "Libelle de la voie.",
+          "title" : "Libelle voie",
+          "maxLength" : 21
+        },
+        "complementLocalisation" : {
+          "type" : "string",
+          "example" : "Batiment A",
+          "description" : "Complement de localisation.",
+          "title" : "Complement localisation",
+          "maxLength" : 32
+        },
+        "lieuDit" : {
+          "type" : "string",
+          "example" : "La Rotonde",
+          "description" : "Lieu Dit.",
+          "title" : "Lieu Dit",
+          "maxLength" : 32
+        },
+        "codeCommune" : {
+          "type" : "string",
+          "example" : "94022",
+          "description" : "Numero INSEE identifiant la commune. Par exemple, le code 94022 identifie la commune de CHOISY LE ROI.",
+          "title" : "Code Commune INSEE",
+          "minLength" : 5,
+          "maxLength" : 5
+        },
+        "codePostal" : {
+          "type" : "string",
+          "example" : "94600",
+          "description" : "Code postal de la commune.",
+          "title" : "Code postal",
+          "minLength" : 5,
+          "maxLength" : 5
+        }
+      }
+    },
+    "AgrementAF" : {
+      "type" : "object",
+      "properties" : {
+        "codeConseilDepartemental" : {
+          "type" : "string",
+          "example" : "001",
+          "description" : "Code du Conseil Departemental qui a delivre l'agrement de l'accueillant familial. Ce champ est obligatoire si l'indicateur de certification d'agrement vaut 'true'.",
+          "title" : "Code Conseil departemental",
+          "minLength" : 3,
+          "maxLength" : 3
+        },
+        "numeroAgrement" : {
+          "type" : "string",
+          "example" : "12345678910111213145",
+          "description" : "Numero d'agrement de l'Accueillant Familial.",
+          "title" : "Numero d'agrement",
+          "maxLength" : 20
+        },
+        "dateDebutAgrement" : {
+          "type" : "string",
+          "format" : "date",
+          "example" : "2019-01-01",
+          "description" : "Date de debut de validite de l'agrement de l'Accueillant Familial.",
+          "title" : "Date de debut de validite de l'agrement"
+        },
+        "dateFinAgrement" : {
+          "type" : "string",
+          "format" : "date",
+          "example" : "2021-01-30",
+          "description" : "Date de fin de validite de l'agrement de l'Accueillant Familial.",
+          "title" : "Date de fin de validite de l'agrement"
+        },
+        "indCertificationValiditeAgrement" : {
+          "type" : "boolean",
+          "example" : true,
+          "description" : "Indicateur indiquant que l'Accueillant Familial dispose d'un agrement delivre par son Departement en cours de validite. Si cet indicateur vaut 'true' alors l'indicateur indRemplacementPonctuel doit valoir 'false'. Par ailleurs, si l'indicateur vaut 'true', le code du Conseil Departemental et les dates de debut/fin de validite d'agrement sont obligatoires.",
+          "title" : "Indicateur de validite de l'agrement"
+        },
+        "indRemplacementPonctuel" : {
+          "type" : "boolean",
+          "example" : false,
+          "description" : "Indicateur indiquant que l'Accueillant Familial ne dispose pas d'un agrement mais qu'il intervient dans le cadre d'un remplacement ponctuel. Si cet indicateur vaut 'true' alors l'indicateur indCertificationValiditeAgrement doit valoir 'false'",
+          "title" : "Indicateur de remplacement ponctuel"
+        }
+      }
+    },
+    "ComplementSalaire" : {
+      "type" : "object",
+      "required" : [ "codeCategorie", "codeSousCategorie" ],
+      "properties" : {
+        "codeCategorie" : {
+          "type" : "string",
+          "example" : "TRAN",
+          "description" : "Code de categorie du complement de salaire.",
+          "title" : "Code categorie",
+          "minLength" : 4,
+          "maxLength" : 4
+        },
+        "codeSousCategorie" : {
+          "type" : "string",
+          "example" : "FRAI",
+          "description" : "Code de sous-categorie du complement de salaire.",
+          "title" : "Code sous-categorie",
+          "minLength" : 4,
+          "maxLength" : 4
+        },
+        "montant" : {
+          "type" : "number",
+          "format" : "double",
+          "example" : 150.0,
+          "description" : "Montant du complement de salaire.",
+          "title" : "Montant du complement de salaire",
+          "maximum" : 99999.99,
+          "multipleOf" : 0.01
+        },
+        "salaireHoraire" : {
+          "type" : "number",
+          "format" : "double",
+          "example" : 12.5,
+          "description" : "Salaire Horaire a renseigner pour certains complements de salaire.",
+          "title" : "Salaire Horaire",
+          "maximum" : 999.99,
+          "multipleOf" : 0.01
+        },
+        "nombreHeures" : {
+          "type" : "integer",
+          "format" : "int32",
+          "example" : 5,
+          "description" : "Nombre d'heures a renseigner pour certains complements de salaire.",
+          "title" : "Nombre d'heures",
+          "minimum" : 0,
+          "maximum" : 999
+        }
+      }
+    },
+    "Cotisations" : {
+      "type" : "object",
+      "properties" : {
+        "cotisationsPatronales" : {
+          "type" : "number",
+          "format" : "double",
+          "example" : 63.1,
+          "description" : "Montant total des cotisations patronales",
+          "title" : "Montant total des cotisations patronales"
+        },
+        "cotisationsSalariales" : {
+          "type" : "number",
+          "format" : "double",
+          "example" : 20.09,
+          "description" : "Montant total des cotisations salariales",
+          "title" : "Montant total des cotisations salariales"
+        }
+      }
+    },
+    "Erreur" : {
+      "type" : "object",
+      "properties" : {
+        "code" : {
+          "type" : "string",
+          "example" : "PARAM_INVALIDE",
+          "title" : "Code d'erreur"
+        },
+        "message" : {
+          "type" : "string",
+          "example" : "Requete incorrecte",
+          "title" : "Message d'erreur"
+        },
+        "description" : {
+          "type" : "string",
+          "example" : "Le format du champ numeroCesu est incorrect",
+          "title" : "Description de l'erreur"
+        }
+      }
+    },
+    "InfosSalarie" : {
+      "type" : "object",
+      "properties" : {
+        "numeroCesu" : {
+          "type" : "string",
+          "description" : "Numero CESU du salarie. Chaine alphanumerique sur 14 caracteres.",
+          "title" : "Numero CESU",
+          "minLength" : 14,
+          "maxLength" : 14
+        },
+        "codeCivilite" : {
+          "type" : "string",
+          "example" : "1",
+          "description" : "<u>Codes civilite</u> :<br>1 - M.<br>2 - Mme",
+          "title" : "Code civilite",
+          "enum" : [ "1", "2" ]
+        },
+        "adresse" : {
+          "$ref" : "#/definitions/Adresse"
+        },
+        "nomNaissance" : {
+          "type" : "string",
+          "example" : "Dupond",
+          "description" : "Nom de naissance du salarie.",
+          "title" : "Nom de naissance",
+          "maxLength" : 30,
+          "pattern" : "[a-zA-ZaAaAaAaAeEeEeEeEiIiIiIiInNoOoOoOoOuUuUuUuUcCyYyYŒœÆæ'\\-\\s]*"
+        },
+        "nomUsage" : {
+          "type" : "string",
+          "example" : "Dupond",
+          "description" : "Nom d'usage du salarie.",
+          "title" : "Nom d'usage",
+          "maxLength" : 30,
+          "pattern" : "[a-zA-ZaAaAaAaAeEeEeEeEiIiIiIiInNoOoOoOoOuUuUuUuUcCyYyYŒœÆæ'\\-\\s]*"
+        },
+        "prenom" : {
+          "type" : "string",
+          "example" : "Marcel",
+          "description" : "Prenom du salarie.",
+          "title" : "Prenom",
+          "maxLength" : 30,
+          "pattern" : "[a-zA-ZaAaAaAaAeEeEeEeEiIiIiIiInNoOoOoOoOuUuUuUuUcCyYyYŒœÆæ'\\-\\s]*"
+        },
+        "dateNaissance" : {
+          "type" : "string",
+          "format" : "date",
+          "example" : "2019-01-30",
+          "description" : "Date de naissance du salarie.",
+          "title" : "Date de naissance"
+        },
+        "villeNaissance" : {
+          "type" : "string",
+          "example" : "Annonay",
+          "description" : "Ville de naissance du salarie.",
+          "title" : "Ville de naissance",
+          "maxLength" : 30,
+          "pattern" : "[a-zA-ZaAaAaAaAeEeEeEeEiIiIiIiInNoOoOoOoOuUuUuUuUcCyYyYŒœÆæ'\\-\\s]*"
+        },
+        "departementNaissance" : {
+          "type" : "string",
+          "example" : "07",
+          "description" : "Departement de naissance du salarie.",
+          "title" : "Departement de naissance",
+          "maxLength" : 3
+        },
+        "codePaysNaissance" : {
+          "type" : "string",
+          "example" : "100",
+          "description" : "Code INSEE du pays de naissance du salarie (ex. FRANCE = 100). Ce champ est obligatoire en l'absence de numero CESU et de NIR.",
+          "title" : "Code INSEE du pays de naissance",
+          "maxLength" : 3
+        },
+        "email" : {
+          "type" : "string",
+          "example" : "marcel.dupond@domaine.com",
+          "description" : "Adresse electronique du salarie.",
+          "title" : "Adresse Email",
+          "maxLength" : 256,
+          "pattern" : "^[-A-Za-z0-9_]+(\\.[-A-Za-z0-9_]+)*@[A-Za-z0-9]+((-|\\.)[A-Za-z0-9]+)*\\.[A-Za-z]+$"
+        },
+        "telephone" : {
+          "type" : "string",
+          "example" : "0645254178",
+          "description" : "Numero de telephone du salarie. Sur 10 chiffres.",
+          "title" : "Numero de telephone",
+          "minLength" : 10,
+          "maxLength" : 10,
+          "pattern" : "^$|.*[0-9]{10}.*"
+        },
+        "nir" : {
+          "type" : "string",
+          "description" : "Numero de securite sociale du salarie sur 15 caracteres. Ce champ est obligatoire en l'absence de numero CESU et de donnees administratives du salarie (nom de naissance, prenom, date de naissance, ville de naissance, departement de naissance (si ne en France), pays de naissance).",
+          "title" : "Numero de securite sociale",
+          "minLength" : 15,
+          "maxLength" : 15
+        },
+        "typeEmploi" : {
+          "type" : "string",
+          "example" : "PE",
+          "description" : "Type d'emploi (Emploi Familial[PE] ou Accueillant Familial[AF]).",
+          "title" : "Type d'emploi (Emploi Familial[PE] ou Accueillant Familial[AF])",
+          "enum" : [ "PE", "AF" ]
+        },
+        "congesPayes" : {
+          "type" : "boolean",
+          "example" : true,
+          "description" : "Valeur booleenne indiquant si le pourcentage correspondant aux conges payes sont inclus ou non dans le salaire horaire. Si le pourcentage est inclus au salaire horaire, celui-ci vaut 10%. Si l'indicateur vaut false, alors le pourcentage correspondant aux conges payes n'est pas inclus au salaire horaire et il faudra renseigner obligatoirement le parametre heureCp.",
+          "title" : "Indicateur conges payes"
+        },
+        "agrementAF" : {
+          "$ref" : "#/definitions/AgrementAF"
+        }
+      }
+    },
+    "InputActivationAici" : {
+      "type" : "object",
+      "required" : [ "codeCivilite", "codePaysNaissance", "dateNaissance", "nomNaissance", "nomUsage", "prenom" ],
+      "properties" : {
+        "nomNaissance" : {
+          "type" : "string",
+          "example" : "Dupond",
+          "description" : "Nom de naissance du Particulier Employeur.",
+          "title" : "Nom de naissance",
+          "maxLength" : 30
+        },
+        "nomUsage" : {
+          "type" : "string",
+          "example" : "Dupond",
+          "description" : "Nom d'usage du Particulier Employeur.",
+          "title" : "Nom d'usage",
+          "maxLength" : 30
+        },
+        "prenom" : {
+          "type" : "string",
+          "example" : "Marcel",
+          "description" : "Prenom du Particulier Employeur.",
+          "title" : "Prenom",
+          "maxLength" : 30
+        },
+        "codeCivilite" : {
+          "type" : "string",
+          "example" : "1",
+          "description" : "Code de la civilite du Particulier Employeur. Valeurs possibles : 1 = masculin ou 2 = feminin. Format : 1 caractere numerique.",
+          "title" : "Code de la civilite",
+          "minLength" : 1,
+          "maxLength" : 2
+        },
+        "dateNaissance" : {
+          "type" : "string",
+          "format" : "date",
+          "example" : "2019-01-30",
+          "description" : "Date de naissance du Particulier Employeur",
+          "title" : "Date de naissance"
+        },
+        "codePaysNaissance" : {
+          "type" : "string",
+          "example" : "100",
+          "description" : "Code INSEE du pays de naissance du Particulier Employeur (ex. FRANCE = 100). Ce champ est obligatoire en l'absence de numero CESU et de NIR.",
+          "title" : "Code INSEE du pays de naissance",
+          "minLength" : 3,
+          "maxLength" : 3
+        },
+        "codeCommuneNaissance" : {
+          "type" : "string",
+          "example" : "69381",
+          "description" : "Code INSEE de la commune de naissance du Particulier Employeur sur 5 caracteres. Champ obligatoire lorsque codePaysNaissance est a 100.",
+          "title" : "Code INSEE de la commune de naissance",
+          "minLength" : 5,
+          "maxLength" : 5
+        },
+        "libelleCommuneNaissance" : {
+          "type" : "string",
+          "example" : "LYON 01",
+          "description" : "Libelle de la commune de naissance du Particulier Employeur.",
+          "title" : "Libelle de la commune de naissance",
+          "maxLength" : 60
+        }
+      }
+    },
+    "InputDeclaration" : {
+      "type" : "object",
+      "required" : [ "dateDebut", "dateFin", "dateVersement", "infosSalarie" ],
+      "properties" : {
+        "dateDebut" : {
+          "type" : "string",
+          "format" : "date",
+          "example" : "2019-01-01",
+          "description" : "Date de debut de la prestation.",
+          "title" : "Date de debut d'emploi"
+        },
+        "dateFin" : {
+          "type" : "string",
+          "format" : "date",
+          "example" : "2019-01-30",
+          "description" : "Date de fin de la prestation.",
+          "title" : "Date de fin d'emploi"
+        },
+        "dateVersement" : {
+          "type" : "string",
+          "format" : "date",
+          "example" : "2019-01-30",
+          "description" : "Date de versement du salaire.",
+          "title" : "Date de versement du salaire"
+        },
+        "typeDeclaration" : {
+          "type" : "integer",
+          "format" : "int32",
+          "example" : 1,
+          "description" : "Type de la declaration. Valeur numerique : 0 = declaration Cesu ; 1 = declaration Cesu+ avec AICI",
+          "title" : "Type de declaration (Cesu ou Cesu+ avec AICI)",
+          "minimum" : 0,
+          "maximum" : 1,
+          "default" : 0
+        },
+        "natureActivite" : {
+          "type" : "string",
+          "example" : "08",
+          "description" : "Code Nature d'activite (2 caracteres). Dans le cadre d'une declaration CESU (typeDeclaration = 0) la nature est facultative (sauf pour les AF ou il ne faut pas renseigner de valeur). Pour une declaration Cesu+ avec AICI (type Declaration = 1) le code nature est obligatoire. Par exemple, '08' pour 'Petit jardinage'.",
+          "title" : "Nature d'activite",
+          "minLength" : 2,
+          "maxLength" : 2
+        },
+        "montantAcompte" : {
+          "type" : "number",
+          "format" : "double",
+          "example" : 150.0,
+          "description" : "Montant du salaire deja verse par le particulier employeur a son salarie. Donnee facultative",
+          "title" : "Montant de l'acompte",
+          "minimum" : 0.01
+        },
+        "revenusAf" : {
+          "$ref" : "#/definitions/RevenusAf"
+        },
+        "revenusEf" : {
+          "$ref" : "#/definitions/RevenusEf"
+        },
+        "infosSalarie" : {
+          "$ref" : "#/definitions/InfosSalarie"
+        }
+      }
+    },
+    "InputEstimation" : {
+      "type" : "object",
+      "required" : [ "typeEmploi" ],
+      "properties" : {
+        "typeEmploi" : {
+          "type" : "string",
+          "description" : "PE : Emploi Familial. AF : Accueillant Familial.",
+          "enum" : [ "PE", "AF" ]
+        },
+        "revenusAf" : {
+          "$ref" : "#/definitions/RevenusAfSimu"
+        },
+        "revenusEf" : {
+          "$ref" : "#/definitions/RevenusEfSimu"
+        }
+      }
+    },
+    "InputInscriptionPe" : {
+      "type" : "object",
+      "required" : [ "adresseEmploi", "codeCivilite", "dateNaissance", "email", "nom", "prenom", "rib", "telephone" ],
+      "properties" : {
+        "codeCivilite" : {
+          "type" : "string",
+          "example" : "1",
+          "description" : "<u>Codes civilite</u> :<br>1 - M.<br>2 - Mme",
+          "title" : "Code civilite",
+          "enum" : [ "1", "2" ]
+        },
+        "adresseEmploi" : {
+          "$ref" : "#/definitions/Adresse"
+        },
+        "nom" : {
+          "type" : "string",
+          "example" : "Dupond",
+          "description" : "Nom du Particulier Employeur.",
+          "title" : "Nom",
+          "maxLength" : 30,
+          "pattern" : "[a-zA-ZaAaAaAaAeEeEeEeEiIiIiIiInNoOoOoOoOuUuUuUuUcCyYyYŒœÆæ'\\-\\s]*"
+        },
+        "prenom" : {
+          "type" : "string",
+          "example" : "Marcel",
+          "description" : "Prenom du Particulier Employeur.",
+          "title" : "Prenom",
+          "maxLength" : 30,
+          "pattern" : "[a-zA-ZaAaAaAaAeEeEeEeEiIiIiIiInNoOoOoOoOuUuUuUuUcCyYyYŒœÆæ'\\-\\s]*"
+        },
+        "dateNaissance" : {
+          "type" : "string",
+          "format" : "date",
+          "example" : "2019-01-30",
+          "description" : "Date de naissance du Particulier Employeur.",
+          "title" : "Date de naissance"
+        },
+        "email" : {
+          "type" : "string",
+          "example" : "marcel.dupond@domaine.com",
+          "description" : "Adresse electronique du Particulier Employeur.",
+          "title" : "Adresse Email",
+          "maxLength" : 256,
+          "pattern" : "^[-A-Za-z0-9_]+(\\.[-A-Za-z0-9_]+)*@[A-Za-z0-9]+((-|\\.)[A-Za-z0-9]+)*\\.[A-Za-z]+$"
+        },
+        "telephone" : {
+          "type" : "string",
+          "example" : "0674154896",
+          "description" : "Numero de telephone du Particulier Employeur. Sur 10 chiffres.",
+          "title" : "Numero de telephone",
+          "maxLength" : 10,
+          "pattern" : "^$|.*[0-9]{10}.*"
+        },
+        "rib" : {
+          "$ref" : "#/definitions/Rib"
+        }
+      }
+    },
+    "OutputActivationAici" : {
+      "type" : "object",
+      "properties" : {
+        "activationAici" : {
+          "type" : "boolean",
+          "example" : true,
+          "description" : "Accord du SP aupres du PE pour l'activation du Cesu+ (false=le SP n'est pas d'accord ; true=le SP est d'accord).",
+          "title" : "Indicateur d'activation de l'avance immediate de credit d'impot"
+        }
+      }
+    },
+    "OutputActivationCesuPlus" : {
+      "type" : "object",
+      "properties" : {
+        "activationCesu" : {
+          "type" : "boolean",
+          "example" : true,
+          "description" : "Etat d'activation du service CESU+ pour le couple employeur / salarie (false=Le Cesu+ n'est pas actif ; true= le Cesu+ est active)",
+          "title" : "Indicateur d'activation du CESU+"
+        }
+      }
+    },
+    "OutputDeclaration" : {
+      "type" : "object",
+      "properties" : {
+        "idDeclaration" : {
+          "type" : "string",
+          "example" : "209299542888",
+          "description" : "Reference documentaire de la declaration sur 12 caracteres.",
+          "title" : "Identifiant de la declaration"
+        },
+        "montantsCotisations" : {
+          "$ref" : "#/definitions/Cotisations"
+        },
+        "montantPAS" : {
+          "type" : "number",
+          "format" : "double",
+          "example" : 0.0,
+          "description" : "Montant caclule du Prelevement a la Source (PAS).",
+          "title" : "Montant du PAS"
+        },
+        "montantPrelevementPECotisations" : {
+          "type" : "number",
+          "format" : "double",
+          "example" : 0.0,
+          "description" : "Montant des cotisations restant a la charge de l'employeur, deduction faite des eventuelles aides (Credit d'impot immediat, aides departementales).",
+          "title" : "Montant des cotisations qui seront prelevees a l'employeur"
+        },
+        "montantPrelevementPEPAS" : {
+          "type" : "number",
+          "format" : "double",
+          "example" : 0.0,
+          "description" : "Montant du prelevement a la source restant a la charge de l'employeur, deduction faite des eventuelles aides (Credit d'impot immediat).",
+          "title" : "Montant du prelevement a la source qui sera preleve a l'employeur"
+        },
+        "montantPrelevementPESalaire" : {
+          "type" : "number",
+          "format" : "double",
+          "example" : 1200.0,
+          "description" : "Montant du salaire restant a la charge de l'employeur, deduction faite des eventuelles aides (Credit d'impot immediat, aides departementales).",
+          "title" : "Montant du salaire qui sera preleve a l'employeur"
+        },
+        "montantSalaireBrut" : {
+          "type" : "number",
+          "format" : "double",
+          "example" : 1400.0,
+          "description" : "Montant du salaire brut reconstitue a partir du net.",
+          "title" : "Montant du salaire brut"
+        },
+        "montantSalaireNetImposable" : {
+          "type" : "number",
+          "format" : "double",
+          "example" : 1350.0,
+          "description" : "Montant du salaire net imposable.",
+          "title" : "Montant du salaire net imposable"
+        },
+        "montantVirementSalaire" : {
+          "type" : "number",
+          "format" : "double",
+          "example" : 300.0,
+          "description" : "Montant du salaire net verse par le CNCESU au salarie. Uniquement dans le cadre du service Cesu+.",
+          "title" : "Montant du salaire net qui sera verse au salarie"
+        },
+        "montantAICI" : {
+          "type" : "number",
+          "format" : "double",
+          "example" : 350.0,
+          "description" : "Montant total de l'avance immediate de credit d'impot applique sur les cotisations, le PAS et le salaire.",
+          "title" : "Montant total de l'avance immediate de credit d'impot"
+        }
+      }
+    },
+    "OutputEstimation" : {
+      "type" : "object",
+      "properties" : {
+        "cotisations" : {
+          "$ref" : "#/definitions/Cotisations"
+        }
+      }
+    },
+    "OutputInscriptionPe" : {
+      "type" : "object",
+      "properties" : {
+        "numeroCesu" : {
+          "type" : "string",
+          "description" : "Numero identifiant le Particulier Employeur au CESU.",
+          "title" : "Numero CESU employeur"
+        }
+      }
+    },
+    "OutputVerificationPe" : {
+      "type" : "object",
+      "properties" : {
+        "inscrit" : {
+          "type" : "boolean",
+          "example" : true,
+          "description" : "Indicateur precisant si le PE est inscrit au CESU.",
+          "title" : "Indicateur PE inscrit au CESU"
+        },
+        "etatCompteEnLigne" : {
+          "type" : "string",
+          "example" : "actif",
+          "description" : "Indicateur precisant l'etat du compte en ligne du PE au CESU.",
+          "title" : "Indicateur PE possedant un compte en ligne",
+          "enum" : [ "absent", "inactif", "actif", "bloque", "radie" ]
+        },
+        "etatMandatSepa" : {
+          "type" : "string",
+          "example" : "actif",
+          "description" : "Indicateur precisant le statut du mandat de prelevement SEPA du PE au CESU.",
+          "title" : "Indicateur PE possedant un mandat de prelevement SEPA",
+          "enum" : [ "absent", "inactif", "actif" ]
+        },
+        "mandatPresent" : {
+          "type" : "boolean",
+          "example" : true,
+          "description" : "Indicateur de presence d'un mandat de tierce declaration pour ce compte et cette plateforme",
+          "title" : "Indicateur presence mandat de tierce declaration"
+        },
+        "etatCesuPlus" : {
+          "type" : "string",
+          "example" : "active",
+          "description" : "Indicateur de l'etat du service CESU+ pour le couple employeur / salarie.",
+          "title" : "Indicateur etat du service CESU+",
+          "enum" : [ "active", "bloque", "desactive" ]
+        },
+        "motifBlocageCesuPlus" : {
+          "type" : "string",
+          "example" : "C00",
+          "description" : "Motif de blocage CESU+ existant pour le compte employeur",
+          "title" : "Motif de blocage CESU+"
+        },
+        "etatAICI" : {
+          "type" : "boolean",
+          "example" : true,
+          "description" : "Indicateur de l'etat du service AICI pour le Particulier Employeur.",
+          "title" : "Indicateur de l'etat du service AICI"
+        }
+      }
+    },
+    "OutputVerificationSp" : {
+      "type" : "object",
+      "properties" : {
+        "inscrit" : {
+          "type" : "boolean",
+          "example" : true,
+          "description" : "Indicateur precisant si le SP est inscrit au CESU.",
+          "title" : "Indicateur SP inscrit au CESU"
+        },
+        "numeroCesu" : {
+          "type" : "string",
+          "description" : "Numero identifiant le SP au CESU.",
+          "title" : "Numero CESU salarie"
+        }
+      }
+    },
+    "PeriodeCongePaye" : {
+      "type" : "object",
+      "properties" : {
+        "dateDebut" : {
+          "type" : "string",
+          "format" : "date",
+          "example" : "2019-01-02",
+          "description" : "Date de debut de la periode de conges.",
+          "title" : "Date de debut du conge"
+        },
+        "dateFin" : {
+          "type" : "string",
+          "format" : "date",
+          "example" : "2021-01-03",
+          "description" : "Date de fin de la periode de conges.",
+          "title" : "Date de fin du conge"
+        },
+        "nbJoursCP" : {
+          "type" : "number",
+          "format" : "double",
+          "example" : 2.0,
+          "description" : "Nombre de jours de conges sur la periode.",
+          "title" : "Nombre de jours de conges",
+          "minimum" : 0,
+          "maximum" : 31,
+          "multipleOf" : 0.5
+        }
+      }
+    },
+    "RevenusAf" : {
+      "type" : "object",
+      "properties" : {
+        "montantIndemniteLogement" : {
+          "type" : "number",
+          "format" : "double",
+          "example" : 0.0,
+          "description" : "Montant d'indemnite de logement.",
+          "title" : "Montant d'indemnite de logement",
+          "minimum" : 0
+        },
+        "nbJoursIndemniteEntretien" : {
+          "type" : "number",
+          "format" : "double",
+          "example" : 1.5,
+          "description" : "Nombre de jours d'indemnite d'entretien.",
+          "title" : "Nombre de jours d'indemnite d'entretien",
+          "minimum" : 0,
+          "maximum" : 99,
+          "multipleOf" : 0.5
+        },
+        "nbJoursSujetionsParticulieres" : {
+          "type" : "number",
+          "format" : "double",
+          "example" : 2.0,
+          "description" : "Nombre de jours d'indemnite de sujetions particulieres.",
+          "title" : "Nombre de jours d'indemnite de sujetions particulieres",
+          "minimum" : 0,
+          "maximum" : 99,
+          "multipleOf" : 0.5
+        },
+        "nbJoursAccueilTempsComplet" : {
+          "type" : "number",
+          "format" : "double",
+          "example" : 1.0,
+          "description" : "Nombre de jours d'accueil a temps complet.",
+          "title" : "Nombre de jours d'accueil a temps complet",
+          "minimum" : 0,
+          "maximum" : 99,
+          "multipleOf" : 0.5
+        },
+        "nbJoursAccueilTempsPartiel" : {
+          "type" : "number",
+          "format" : "double",
+          "example" : 1.0,
+          "description" : "Nombre de jours d'accueil a temps partiel",
+          "title" : "Nombre de jours d'accueil a temps partiel",
+          "minimum" : 0,
+          "maximum" : 99,
+          "multipleOf" : 0.5
+        },
+        "nbMinimumGarantiJourIndemniteEntretien" : {
+          "type" : "number",
+          "format" : "double",
+          "example" : 2.0,
+          "description" : "Nombre de Minimum garanti brut/jour pour l'indemnite d'entretien.",
+          "title" : "Nombre de Minimum garanti brut/jour pour l'indemnite d'entretien",
+          "minimum" : 2,
+          "maximum" : 5
+        },
+        "nbSmicsJourSujetionsParticulieres" : {
+          "type" : "number",
+          "format" : "double",
+          "example" : 1.0,
+          "description" : "Nombre de Smic/jour pour l'indemnite de sujetions particulieres.",
+          "title" : "Nombre de Smic/jour pour l'indemnite de sujetions particulieres",
+          "minimum" : 0
+        },
+        "nbSmicsJourAccueilTempsComplet" : {
+          "type" : "number",
+          "format" : "double",
+          "example" : 1.0,
+          "description" : "Nombre de Smic/jour pour l'accueil a temps complet.",
+          "title" : "Nombre de Smic/jour pour l'accueil a temps complet",
+          "minimum" : 0
+        },
+        "nbSmicsJourAccueilTempsPartiel" : {
+          "type" : "number",
+          "format" : "double",
+          "example" : 1.0,
+          "description" : "Nombre de Smic/jour pour l'accueil a temps partiel.",
+          "title" : "Nombre de Smic/jour pour l'accueil a temps partiel",
+          "minimum" : 0
+        }
+      }
+    },
+    "RevenusAfSimu" : {
+      "allOf" : [ {
+        "$ref" : "#/definitions/RevenusAf"
+      }, {
+        "type" : "object",
+        "required" : [ "codeZoneGeographique" ],
+        "properties" : {
+          "codeZoneGeographique" : {
+            "type" : "string",
+            "example" : "NATIO",
+            "description" : "Code de la zone geographique du lieu d'emploi.",
+            "title" : "Code zone geographique",
+            "minLength" : 5,
+            "maxLength" : 5,
+            "enum" : [ "NATIO", "DOM", "ALSMO", "ETRAN", "97100", "97200", "97300", "97400", "97700", "97800" ]
+          }
+        }
+      } ]
+    },
+    "RevenusEf" : {
+      "allOf" : [ {
+        "$ref" : "#/definitions/RevenusEfBase"
+      }, {
+        "type" : "object",
+        "properties" : {
+          "periodesCongesPayes" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/definitions/PeriodeCongePaye"
+            }
+          }
+        }
+      } ]
+    },
+    "RevenusEfBase" : {
+      "type" : "object",
+      "required" : [ "heuresTravaillees", "salaireHoraire" ],
+      "properties" : {
+        "salaireHoraire" : {
+          "type" : "number",
+          "format" : "double",
+          "example" : 12.5,
+          "description" : "Salaire horaire declare.",
+          "title" : "Salaire horaire declare.",
+          "maximum" : 999.99,
+          "multipleOf" : 0.01
+        },
+        "heuresTravaillees" : {
+          "type" : "integer",
+          "format" : "int32",
+          "example" : 120,
+          "description" : "Nombre d'heures travaillees dans la limite de 200.",
+          "title" : "Nombre d'heures travaillees",
+          "minimum" : 0,
+          "maximum" : 200
+        },
+        "nbHeureSupplementaire1" : {
+          "type" : "integer",
+          "format" : "int32",
+          "example" : 3,
+          "description" : "Nombre d'heures supplementaires majorees a 25%. A partir de 40h normales. Dans la limite de 35.",
+          "title" : "Nombre d'heures supplementaires majorees a 25%",
+          "minimum" : 0,
+          "maximum" : 35
+        },
+        "nbHeureSupplementaire2" : {
+          "type" : "integer",
+          "format" : "int32",
+          "example" : 4,
+          "description" : "Nombre d'heures supplementaires majorees a 50%. A partir de 40h normales et 8h majorees a 25%. Dans la limite de 40.",
+          "title" : "Nombre d'heures supplementaires majorees a 50%",
+          "minimum" : 0,
+          "maximum" : 40
+        },
+        "heuresCp" : {
+          "type" : "integer",
+          "format" : "int32",
+          "example" : 10,
+          "description" : "Nombre d'heures declarees au titre des conges payes (a renseigner si gestion des conges payes specifiques et qu'au moins une periode de conges payes renseignee sur la declaration).",
+          "title" : "Nombre d'heures CP",
+          "minimum" : 0,
+          "maximum" : 200
+        },
+        "complementsSalaire" : {
+          "type" : "array",
+          "items" : {
+            "$ref" : "#/definitions/ComplementSalaire"
+          }
+        }
+      }
+    },
+    "RevenusEfSimu" : {
+      "allOf" : [ {
+        "$ref" : "#/definitions/RevenusEfBase"
+      }, {
+        "type" : "object",
+        "required" : [ "codeExoneration", "codeZoneGeographique", "congesPayes", "typeSalaire" ],
+        "properties" : {
+          "typeSalaire" : {
+            "type" : "string",
+            "example" : "NET",
+            "description" : "Type de salaire (BRUT ou NET)",
+            "title" : "Type de salaire",
+            "enum" : [ "BRUT", "NET" ]
+          },
+          "codeExoneration" : {
+            "type" : "string",
+            "example" : "02",
+            "description" : "Code de l'exoneration du particulier employeur.",
+            "title" : "Code exoneration",
+            "minLength" : 2,
+            "maxLength" : 2
+          },
+          "codeZoneGeographique" : {
+            "type" : "string",
+            "example" : "NATIO",
+            "description" : "Code de la zone geographique du lieu d'emploi.",
+            "title" : "Code zone geographique",
+            "minLength" : 5,
+            "maxLength" : 5,
+            "enum" : [ "NATIO", "DOM", "ALSMO", "ETRAN", "97100", "97200", "97300", "97400", "97700", "97800" ]
+          },
+          "congesPayes" : {
+            "type" : "boolean",
+            "example" : true,
+            "description" : "Valeur booleenne indiquant si le pourcentage correspondant aux conges payes sont inclus ou non dans le salaire horaire. Si le pourcentage est inclus au salaire horaire, celui-ci vaut 10%. Si l'indicateur vaut false, alors le pourcentage correspondant aux conges payes n'est pas inclus au salaire horaire et il faudra renseigner obligatoirement le parametre heureCp.",
+            "title" : "Indicateur conges payes"
+          }
+        }
+      } ]
+    },
+    "Rib" : {
+      "type" : "object",
+      "required" : [ "bic", "iban", "mandatSepa" ],
+      "properties" : {
+        "iban" : {
+          "type" : "string",
+          "example" : "FR7612548029989876543210917",
+          "description" : "Numero de compte bancaire international.",
+          "title" : "IBAN",
+          "minLength" : 1,
+          "maxLength" : 34
+        },
+        "bic" : {
+          "type" : "string",
+          "example" : "CCBPFRPPVER",
+          "description" : "Bank Identifier Code (BIC). Code international qui permet l'identification de la banque.",
+          "title" : "BIC",
+          "minLength" : 1,
+          "maxLength" : 11
+        },
+        "mandatSepa" : {
+          "type" : "boolean",
+          "example" : true,
+          "description" : "Accord du PE donne a la plateforme pour teledeclarer.",
+          "title" : "Indicateur mandat SEPA donne a la plateforme"
+        }
+      }
+    }
+  }
+}

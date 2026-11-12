@@ -1,0 +1,73 @@
+{
+    "dateDebut": "2019-01-01",
+    "dateFin": "2019-01-30",
+    "dateVersement": "2019-01-30",
+    "revenusAf": {
+        "montantIndemniteLogement": 0,
+        "nbJoursIndemniteEntretien": 0,
+        "nbJoursSujetionsParticulieres": 0,
+        "nbJoursAccueilTempsComplet": 0,
+        "nbJoursAccueilTempsPartiel": 0,
+        "nbMinimumGarantiJourIndemniteEntretien": 0,
+        "nbSmicsJourSujetionsParticulieres": 0,
+        "nbSmicsJourAccueilTempsComplet": 0,
+        "nbSmicsJourAccueilTempsPartiel": 0
+    },
+    "revenusEf": {
+        "salaireHoraire": 0,
+        "heuresTravaillees": 0,
+        "nbHeureSupplementaire1": 0,
+        "nbHeureSupplementaire2": 0,
+        "heuresCp": 0,
+        "complementsSalaire": [
+            {
+                "codeCategorie": "string",
+                "codeSousCategorie": "string",
+                "montant": 0,
+                "salaireHoraire": 0,
+                "nombreHeures": 0
+            }
+        ],
+        "periodesCongesPayes": [
+            {
+                "dateDebut": "2019-01-02",
+                "dateFin": "2021-01-03",
+                "nbJoursCP": 2
+            }
+        ]
+    },
+    "infosSalarie": {
+        "numeroCesu": "string",
+        "codeCivilite": "1",
+        "adresse": {
+            "numVoie": 0,
+            "lettreVoie": "string",
+            "typeVoie": "string",
+            "libelleVoie": "string",
+            "complementLocalisation": "string",
+            "lieuDit": "string",
+            "codeCommune": "string",
+            "codePostal": "string"
+        },
+        "nomNaissance": "string",
+        "nomUsage": "string",
+        "prenom": "string",
+        "dateNaissance": "2019-01-30",
+        "villeNaissance": "string",
+        "departementNaissance": "string",
+        "codePaysNaissance": "string",
+        "email": "string",
+        "telephone": "string",
+        "nir": "string",
+        "typeEmploi": "PE",
+        "congesPayes": true,
+        "agrementAF": {
+            "codeConseilDepartemental": "001",
+            "numeroAgrement": "12345678910111213145",
+            "dateDebutAgrement": "2019-01-01",
+            "dateFinAgrement": "2021-01-30",
+            "indCertificationValiditeAgrement": true,
+            "indRemplacementPonctuel": false
+        }
+    }
+}

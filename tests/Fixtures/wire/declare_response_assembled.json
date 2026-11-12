@@ -1,0 +1,15 @@
+{
+    "idDeclaration": "209299542888",
+    "montantsCotisations": {
+        "cotisationsPatronales": 63.1,
+        "cotisationsSalariales": 20.09
+    },
+    "montantPAS": 0.0,
+    "montantPrelevementPECotisations": 0.0,
+    "montantPrelevementPEPAS": 0.0,
+    "montantPrelevementPESalaire": 1200.0,
+    "montantSalaireBrut": 1400.0,
+    "montantSalaireNetImposable": 1350.0,
+    "montantVirementSalaire": 300.0,
+    "montantAICI": 350.0
+}

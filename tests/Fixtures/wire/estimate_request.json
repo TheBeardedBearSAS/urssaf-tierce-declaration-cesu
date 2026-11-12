@@ -1,0 +1,14 @@
+{
+    "typeEmploi": "PE",
+    "revenusEf": {
+        "salaireHoraire": 10,
+        "congesPayes": true,
+        "heuresTravaillees": 12,
+        "nbHeureSupplementaire1": 0,
+        "nbHeureSupplementaire2": 0,
+        "heuresCp": 0,
+        "typeSalaire": "NET",
+        "codeExoneration": "02",
+        "codeZoneGeographique": "NATIO"
+    }
+}
