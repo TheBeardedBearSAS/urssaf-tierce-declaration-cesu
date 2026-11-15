@@ -2,6 +2,7 @@
 
 <!-- the-bearded-bear:badges:start -->
 [![CI](https://github.com/TheBeardedBearSAS/urssaf-tierce-declaration-cesu/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/TheBeardedBearSAS/urssaf-tierce-declaration-cesu/actions/workflows/ci.yml?query=branch%3Amain) [![Coverage](https://codecov.io/gh/TheBeardedBearSAS/urssaf-tierce-declaration-cesu/branch/main/graph/badge.svg)](https://app.codecov.io/gh/TheBeardedBearSAS/urssaf-tierce-declaration-cesu) [![Mutation score](https://img.shields.io/endpoint?style=flat&url=https%3A%2F%2Fbadge-api.stryker-mutator.io%2Fgithub.com%2FTheBeardedBearSAS%2Furssaf-tierce-declaration-cesu%2Fmain)](https://dashboard.stryker-mutator.io/reports/github.com/TheBeardedBearSAS/urssaf-tierce-declaration-cesu/main) [![Quality Gate](https://sonarcloud.io/api/project_badges/measure?project=TheBeardedBearSAS_urssaf-tierce-declaration-cesu&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=TheBeardedBearSAS_urssaf-tierce-declaration-cesu) [![Maintainability](https://sonarcloud.io/api/project_badges/measure?project=TheBeardedBearSAS_urssaf-tierce-declaration-cesu&metric=sqale_rating)](https://sonarcloud.io/summary/overall?id=TheBeardedBearSAS_urssaf-tierce-declaration-cesu) [![Reliability](https://sonarcloud.io/api/project_badges/measure?project=TheBeardedBearSAS_urssaf-tierce-declaration-cesu&metric=reliability_rating)](https://sonarcloud.io/summary/overall?id=TheBeardedBearSAS_urssaf-tierce-declaration-cesu) [![Security](https://sonarcloud.io/api/project_badges/measure?project=TheBeardedBearSAS_urssaf-tierce-declaration-cesu&metric=security_rating)](https://sonarcloud.io/summary/overall?id=TheBeardedBearSAS_urssaf-tierce-declaration-cesu) [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/TheBeardedBearSAS/urssaf-tierce-declaration-cesu/badge)](https://scorecard.dev/viewer/?uri=github.com/TheBeardedBearSAS/urssaf-tierce-declaration-cesu)
+[![CI](https://github.com/TheBeardedBearSAS/urssaf-tierce-declaration-cesu/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/TheBeardedBearSAS/urssaf-tierce-declaration-cesu/actions/workflows/ci.yml?query=branch%3Amain) [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/TheBeardedBearSAS/urssaf-tierce-declaration-cesu/badge)](https://scorecard.dev/viewer/?uri=github.com/TheBeardedBearSAS/urssaf-tierce-declaration-cesu)
 [![PHPStan level max](https://img.shields.io/badge/PHPStan-level%20max-brightgreen)](phpstan.neon.dist) [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 <!-- the-bearded-bear:badges:end -->
 
@@ -20,8 +21,10 @@ Developed and maintained by [The Bearded Bear](https://the-bearded-bear.com).
 > process; the URSSAF documentation remains the authority on the API, and you remain responsible for the data your
 > application sends to URSSAF.
 
-> 🚧 **Work in progress — not released yet.** The implementation follows [docs/roadmap.md](docs/roadmap.md) and the
-> architecture decision records in [docs/adr/](docs/adr/).
+**Status: implemented, not released on Packagist yet.** The nine operations, the workflow, the standalone builder, the
+Symfony bundle and the Doctrine bridge are in place; the sandbox contract run that settles the open points of the API
+reference is still to do. See [docs/roadmap.md](docs/roadmap.md) and the architecture decision records in
+[docs/adr/](docs/adr/).
 
 ## Scope
 
@@ -43,13 +46,14 @@ OAuth2 client credentials, scope `tiersdecl.cesu`, base URL `https://api.urssaf.
 ## Documentation
 
 - [docs/api-reference.md](docs/api-reference.md) — technical reference (single source of truth for the package).
-- [docs/roadmap.md](docs/roadmap.md) — planned architecture and order of work.
+- [docs/roadmap.md](docs/roadmap.md) — implementation status and what remains.
 - [docs/workflow.md](docs/workflow.md) — employer, mandate and declaration lifecycles, idempotency, retries, monitoring.
 - [docs/integration-events.md](docs/integration-events.md) — public integration events (`urssaf.cesu.*`) and the outbox.
 - [docs/doctrine.md](docs/doctrine.md) — Doctrine persistence: tables, dedicated entity manager, concurrency, personal data and encryption, migrations.
 - [docs/standalone.md](docs/standalone.md) — wiring without the Symfony bundle: builder options, scheduling, manual wiring.
 - [docs/symfony.md](docs/symfony.md) — Symfony bundle: configuration reference, console commands, Messenger, Scheduler, locks, validation, translations.
 - [docs/testing.md](docs/testing.md) — testing a host application with the in-memory simulated gateway.
+- [docs/adr/](docs/adr/README.md) — architecture decision records.
 - [docs/openapi/](docs/openapi/) — official OpenAPI contract(s) from the URSSAF API portal.
 - `docs/reference/` — official URSSAF documentation: not versioned (URSSAF documents), download it from the links in [docs/api-reference.md](docs/api-reference.md) into this local, git-ignored folder.
 - Catalogue page: https://portailapi.urssaf.fr/fr/catalogue-api/prd/td-cesu
@@ -92,7 +96,7 @@ Layers are enforced by Deptrac (`deptrac.yaml`):
 
 Decisions: [docs/adr/](docs/adr/).
 
-## Quick start A: framework-agnostic
+## Quick start A: Standalone (framework-agnostic)
 
 ```php
 use Nyholm\Psr7\Factory\Psr17Factory;

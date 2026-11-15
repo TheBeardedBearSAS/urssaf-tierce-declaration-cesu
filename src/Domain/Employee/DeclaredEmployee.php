@@ -17,7 +17,8 @@ use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Shared\PhoneNumber;
  * By Cesu number only the employment kind and the paid leave flag may accompany the reference; by NIR or by identity
  * the civility and the address are required and the administrative data are required with a NIR (see
  * {@see DeclaredEmployeeRule}). The foster carer approval "agrementAF" is held by the declaration content, not here.
- * That the Cesu number cannot be used for the first declaration of a pair is checked by the application (§4.7).
+ * That the Cesu number cannot be used for the first declaration of a pair is left to URSSAF: the package keeps no
+ * registry of employer/employee pairs (api-reference §4.7).
  */
 final readonly class DeclaredEmployee
 {
