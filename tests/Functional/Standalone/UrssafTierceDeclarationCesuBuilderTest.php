@@ -228,9 +228,9 @@ final class UrssafTierceDeclarationCesuBuilderTest extends TestCase
         static::assertCount(1, $urssaf->declarationIds());
         static::assertSame(ItemOutcome::AlreadyDeclared, $again->outcome);
 
-        $september = DraftFixtures::withParts(new EmploymentPeriodDraft('2026-10-01', '2026-10-30'), null, null, null, null);
+        $otherPeriod = DraftFixtures::withParts(new EmploymentPeriodDraft('2026-10-01', '2026-10-30'), null, null, null, null);
         $urssaf->loseNextAnswer(Operation::DeclareSalary);
-        $second = $package->declareSalary()(new DeclareSalary($tenant, ExternalReference::fromString('payslip-b'), $september));
+        $second = $package->declareSalary()(new DeclareSalary($tenant, ExternalReference::fromString('payslip-b'), $otherPeriod));
         $resolved = $package->resolveDeclarationOutcome()(ResolveDeclarationOutcome::asDeclared(
             $tenant,
             DeclarationSelector::byExternalReference(ExternalReference::fromString('payslip-b')),

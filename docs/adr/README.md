@@ -15,3 +15,4 @@
 | [0010](0010-tenant-model.md) | Tenant model |
 | [0011](0011-quotas-and-rate-limit.md) | Quotas and rate limiting |
 | [0012](0012-integration-events.md) | Public integration events |
+| [0013](0013-symfony-bridge.md) | Symfony bridge |

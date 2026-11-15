@@ -1,0 +1,88 @@
+<?php
+
+declare(strict_types=1);
+
+namespace TheBeardedBear\UrssafTierceDeclarationCesu\Tests\Functional\Symfony;
+
+use PHPUnit\Framework\TestCase;
+use TheBeardedBear\UrssafTierceDeclarationCesu\Application\Port\TransactionManager;
+use TheBeardedBear\UrssafTierceDeclarationCesu\Application\Port\WorkflowStatistics;
+use TheBeardedBear\UrssafTierceDeclarationCesu\Bridge\Symfony\DependencyInjection\PersistenceRegistrar;
+use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Declaration\DeclarationRecordRepository;
+use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Employer\EmployerAccountRepository;
+use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Mandate\MandateRepository;
+use TheBeardedBear\UrssafTierceDeclarationCesu\Infrastructure\Persistence\InMemory\InMemoryDeclarationRecordRepository;
+use TheBeardedBear\UrssafTierceDeclarationCesu\Infrastructure\Persistence\InMemory\InMemoryEmployerAccountRepository;
+use TheBeardedBear\UrssafTierceDeclarationCesu\Infrastructure\Persistence\InMemory\InMemoryMandateRepository;
+use TheBeardedBear\UrssafTierceDeclarationCesu\Infrastructure\Persistence\InMemory\InMemoryWorkflowStatistics;
+use TheBeardedBear\UrssafTierceDeclarationCesu\Infrastructure\Transaction\ImmediateTransactionManager;
+use TheBeardedBear\UrssafTierceDeclarationCesu\Tests\Functional\Symfony\Support\Harness;
+use TheBeardedBear\UrssafTierceDeclarationCesu\Tests\Functional\Symfony\Support\Scenario;
+
+/**
+ * The persistence drivers: "in_memory" (default) and "custom" (lot 6 design §4.3).
+ */
+final class PersistenceWiringTest extends TestCase
+{
+    public function testTheInMemoryDriverRegistersTheInMemoryImplementations(): void
+    {
+        $harness = Harness::boot();
+
+        static::assertInstanceOf(InMemoryEmployerAccountRepository::class, $harness->privateService(EmployerAccountRepository::class, EmployerAccountRepository::class));
+        static::assertInstanceOf(InMemoryMandateRepository::class, $harness->privateService(MandateRepository::class, MandateRepository::class));
+        static::assertInstanceOf(InMemoryDeclarationRecordRepository::class, $harness->privateService(DeclarationRecordRepository::class, DeclarationRecordRepository::class));
+        static::assertInstanceOf(ImmediateTransactionManager::class, $harness->privateService(TransactionManager::class, TransactionManager::class));
+        static::assertInstanceOf(InMemoryWorkflowStatistics::class, $harness->privateService(WorkflowStatistics::class, WorkflowStatistics::class));
+    }
+
+    public function testTheStatisticsReadTheRepositoriesOfTheApplication(): void
+    {
+        $harness = Harness::boot();
+
+        Scenario::declaration($harness);
+
+        $statistics = $harness->privateService(WorkflowStatistics::class, WorkflowStatistics::class);
+        static::assertNotSame([], $statistics->employerStages());
+        static::assertNotSame([], $statistics->mandateStates());
+        static::assertNotSame([], $statistics->declarationStates());
+    }
+
+    public function testTheCustomDriverUsesTheRepositoriesOfTheApplication(): void
+    {
+        $harness = Harness::boot(['persistence' => [
+            'driver' => 'custom',
+            'employer_account_repository' => 'test.accounts',
+            'mandate_repository' => 'test.mandates',
+            'declaration_record_repository' => 'test.declarations',
+        ]]);
+
+        static::assertSame($harness->privateService('test.accounts', EmployerAccountRepository::class), $harness->privateService(EmployerAccountRepository::class, EmployerAccountRepository::class));
+        static::assertSame($harness->privateService('test.mandates', MandateRepository::class), $harness->privateService(MandateRepository::class, MandateRepository::class));
+        static::assertSame($harness->privateService('test.declarations', DeclarationRecordRepository::class), $harness->privateService(DeclarationRecordRepository::class, DeclarationRecordRepository::class));
+        static::assertInstanceOf(ImmediateTransactionManager::class, $harness->privateService(TransactionManager::class, TransactionManager::class));
+        static::assertNotSame($harness->privateService('test.transactions', TransactionManager::class), $harness->privateService(TransactionManager::class, TransactionManager::class));
+        static::assertFalse($harness->hasPrivate(WorkflowStatistics::class));
+    }
+
+    public function testTheCustomDriverUsesTheTransactionManagerAndTheStatisticsOfTheApplication(): void
+    {
+        $harness = Harness::boot(['persistence' => [
+            'driver' => 'custom',
+            'employer_account_repository' => 'test.accounts',
+            'mandate_repository' => 'test.mandates',
+            'declaration_record_repository' => 'test.declarations',
+            'transaction_manager' => 'test.transactions',
+            'workflow_statistics' => 'test.statistics',
+        ]]);
+
+        static::assertSame($harness->privateService('test.transactions', TransactionManager::class), $harness->privateService(TransactionManager::class, TransactionManager::class));
+        static::assertSame($harness->privateService('test.statistics', WorkflowStatistics::class), $harness->privateService(WorkflowStatistics::class, WorkflowStatistics::class));
+    }
+
+    public function testTheStatisticsPredicate(): void
+    {
+        static::assertTrue(PersistenceRegistrar::hasStatistics('in_memory', null));
+        static::assertTrue(PersistenceRegistrar::hasStatistics('custom', 'my.statistics'));
+        static::assertFalse(PersistenceRegistrar::hasStatistics('custom', null));
+    }
+}

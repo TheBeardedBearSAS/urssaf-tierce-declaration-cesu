@@ -69,6 +69,8 @@ Consequences).
   separate fake repositories: no duplicated query logic, the shared contract traits prove the inner ones.
   (lead-accepted 2026-11-15)
 - Wire mappers are split per direction (`…RequestMapper` / `…ResponseMapper`) instead of one class per operation (lot 2).
+- Symfony bridge: names, Messenger scope without auto-submit, `in_memory` default driver until the Doctrine bridge, hidden
+  prompts, exit code 2, extra diagnostics — ADR 0013.
 
 ## Not applicable
 - Batching by 10 (050/070 of Tiers de prestations): every CESU call is unitary.
