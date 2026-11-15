@@ -80,8 +80,10 @@
         "symfony/lock": "^6.4.3 || ^7.4",
         "symfony/messenger": "^6.4.3 || ^7.4",
         "symfony/polyfill-php83": "^1.31",
+        "symfony/process": "^6.4.3 || ^7.4",
         "symfony/property-access": "^6.4.3 || ^7.4",
         "symfony/property-info": "^6.4.3 || ^7.4",
+        "symfony/scheduler": "^6.4.3 || ^7.4",
         "symfony/serializer": "^6.4.3 || ^7.4",
         "symfony/string": "^6.4.3 || ^7.4",
         "symfony/translation": "^6.4.3 || ^7.4",
@@ -105,12 +107,23 @@
         "symfony/http-client": "<6.4",
         "symfony/http-kernel": "<6.4",
         "symfony/lock": "<6.4.3",
-        "symfony/messenger": "<6.4.3"
+        "symfony/messenger": "<6.4.3",
+        "symfony/scheduler": "<6.4.3"
     },
     "suggest": {
         "nyholm/psr7": "PSR-17 factories for the HTTP gateway (any PSR-17 implementation works)",
         "symfony/cache": "PSR-6 / PSR-16 pool for the OAuth2 token cache (Psr6TokenStore, Psr16TokenStore)",
-        "symfony/http-client": "PSR-18 compatible HTTP client for the API"
+        "symfony/config": "Required by the Symfony bridge (bundle configuration)",
+        "symfony/console": "Provides the console commands of the bundle",
+        "symfony/dependency-injection": "Required by the Symfony bridge",
+        "symfony/framework-bundle": "Required to use the Symfony bundle",
+        "symfony/http-client": "PSR-18 compatible HTTP client for the API",
+        "symfony/http-kernel": "Required by the Symfony bridge (bundle)",
+        "symfony/lock": "Prevents overlapping runs of the same command / handler (see the \"lock\" bundle option)",
+        "symfony/messenger": "Asynchronous employer status refresh and integration event delivery",
+        "symfony/scheduler": "Runs the safety crons of the package as a Symfony Scheduler schedule (see the \"scheduler\" bundle option)",
+        "symfony/translation": "Translates the violation codes (English and French shipped)",
+        "symfony/validator": "Converts the violations of the package into a ConstraintViolationList (ViolationListConverter)"
     },
     "autoload": {
         "psr-4": {

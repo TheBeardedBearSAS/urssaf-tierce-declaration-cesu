@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace TheBeardedBear\UrssafTierceDeclarationCesu\Tests\Unit\Testing;
 
 use LogicException;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Application\Port\Operation;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Application\Port\Urssaf\ApiErrors;
@@ -82,7 +83,7 @@ final class SimulatedCesuGatewayScriptTest extends TestCase
     {
         $gateway = SimulatorSamples::mandatedGateway();
         $gateway->refuseNext(Operation::DeclareSalary, 'RIB_ABSENT', 'Absence de RIB', null);
-        $gateway->refuseNext(Operation::DeclareSalary, 'AICI_NON_ACTIVE', 'AICI absent', 'Détail');
+        $gateway->refuseNext(Operation::DeclareSalary, 'AICI_NON_ACTIVE', "Service d'AICI non activé sur le compte en ligne employeur", null);
 
         $first = SimulatorSamples::rejection(static fn(): DeclarationResult => $gateway->declare(SimulatorSamples::tenant1(), DeclarationSamples::standard()));
         $second = SimulatorSamples::rejection(static fn(): DeclarationResult => $gateway->declare(SimulatorSamples::tenant1(), DeclarationSamples::standard()));
@@ -95,7 +96,10 @@ final class SimulatedCesuGatewayScriptTest extends TestCase
         static::assertSame('Absence de RIB', $firstError->message());
         static::assertNull($firstError->description());
         static::assertSame(ErrorKind::AiciNotActive, $second->kind());
-        static::assertSame('Détail', $second->errors()->first()?->description());
+        $secondError = $second->errors()->first();
+        static::assertNotNull($secondError);
+        static::assertSame("Service d'AICI non activé sur le compte en ligne employeur", $secondError->message());
+        static::assertNull($secondError->description());
         static::assertSame([], $gateway->declarationIds());
         static::assertSame('SIM-DECL-000001', $gateway->declare(SimulatorSamples::tenant1(), DeclarationSamples::standard())->declarationId()->value());
     }
@@ -103,7 +107,7 @@ final class SimulatedCesuGatewayScriptTest extends TestCase
     public function testARefusalReplacesTheBuiltInRules(): void
     {
         $gateway = SimulatorSamples::mandatedGateway();
-        $gateway->refuseNext(Operation::VerifyEmployer, 'PARAM_INVALIDE', 'Paramètre invalide', null);
+        $gateway->refuseNext(Operation::VerifyEmployer, 'PARAM_INVALIDE', 'Un des paramètres de votre demande est invalide', null);
 
         $rejected = SimulatorSamples::rejection(static fn(): EmployerStatus => $gateway->verifyEmployer(
             SimulatorSamples::tenant1(),
@@ -124,7 +128,47 @@ final class SimulatedCesuGatewayScriptTest extends TestCase
         static::assertTrue($rejected->isCesuPlusDeadlineExceeded());
         static::assertSame(ErrorKind::Business, $rejected->kind());
         static::assertSame(['ERR_METIER'], $rejected->errors()->codes());
-        static::assertSame('Erreur métier', $rejected->errors()->first()?->message());
+        static::assertSame('Une erreur métier cesu+ est survenue', $rejected->errors()->first()?->message());
+    }
+
+    #[DataProvider('businessErrorMessages')]
+    public function testABusinessRefusalUsesTheMessageOfTheSpecification(BusinessError $error, string $message): void
+    {
+        $gateway = SimulatorSamples::mandatedGateway();
+        $gateway->refuseNextWith(Operation::DeclareSalary, $error);
+
+        $rejected = SimulatorSamples::rejection(static fn(): DeclarationResult => $gateway->declare(SimulatorSamples::tenant1(), DeclarationSamples::standard()));
+
+        static::assertSame($message, $rejected->errors()->first()?->message());
+    }
+
+    /**
+     * The Cesu+ eligibility checks of method 050 carry the "cesu+" message, the other business errors the generic one.
+     *
+     * @return iterable<string, array{BusinessError, string}>
+     */
+    public static function businessErrorMessages(): iterable
+    {
+        foreach ([
+            BusinessError::EmployerBankDetailsInactive,
+            BusinessError::EmployerOnlineAccountAnomaly,
+            BusinessError::EmployerAccountAnomaly,
+            BusinessError::CesuPlusDeactivatedByEmployer,
+            BusinessError::UnpaidSalary,
+            BusinessError::UnpaidContributions,
+            BusinessError::EmployeeBankDetailsInactive,
+            BusinessError::EmployeeOnlineAccountAnomaly,
+            BusinessError::EmployeeAccountAnomaly,
+            BusinessError::CesuPlusDeactivated,
+            BusinessError::IdenticalBankDetails,
+            BusinessError::IdenticalCivilStatus,
+            BusinessError::PairAnomaly,
+            BusinessError::CesuPlusDeadlineExceeded,
+            BusinessError::CesuPlusNetSalaryCeilingExceeded,
+        ] as $error) {
+            yield $error->value => [$error, 'Une erreur métier cesu+ est survenue'];
+        }
+        yield 'a business error outside the Cesu+ checks' => [BusinessError::CalculationFailed, ' Une erreur métier est survenue'];
     }
 
     public function testARefusalWithAnUndocumentedBusinessErrorFails(): void
@@ -231,7 +275,7 @@ final class SimulatedCesuGatewayScriptTest extends TestCase
     {
         $gateway = SimulatorSamples::mandatedGateway();
         $gateway->failNext(Operation::EstimateContributions, UrssafAuthenticationFailed::withStatus(401));
-        $gateway->refuseNext(Operation::VerifyEmployee, 'PARAM_INVALIDE', 'Paramètre invalide', null);
+        $gateway->refuseNext(Operation::VerifyEmployee, 'PARAM_INVALIDE', 'Un des paramètres de votre demande est invalide', null);
         $gateway->loseNextAnswer(Operation::ActivateCesuPlus);
 
         $failed = SimulatorSamples::failure(static fn(): ContributionsEstimate => $gateway->estimate(SimulatorSamples::tenant1(), GatewaySamples::estimate()));

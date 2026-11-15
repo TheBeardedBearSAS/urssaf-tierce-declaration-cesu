@@ -79,7 +79,7 @@ final class SimulatedCesuGatewayEmployerTest extends TestCase
         static::assertSame(400, $rejected->httpStatus());
         static::assertSame(Operation::VerifyEmployer, $rejected->operation());
         static::assertTrue($rejected->hasErrorCode('ERR_METIER'));
-        static::assertSame('Erreur métier', $rejected->errors()->first()?->message());
+        static::assertSame(' Une erreur métier est survenue', $rejected->errors()->first()?->message());
     }
 
     public function testAKnownEmployerHasActiveStatesAndNoMandateByDefault(): void

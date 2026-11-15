@@ -40,7 +40,9 @@ give your own repositories and a token store shared by every process.
 
 ## Scheduling
 
-Run the polling and recovery use cases yourself (cron, worker), like the console commands of the bundle:
+Run the polling and recovery use cases yourself (cron, worker), like the console commands of the
+[Symfony bundle](symfony.md#console-commands) (`urssaf:cesu:employers:sync-status`, `urssaf:cesu:declarations:reconcile-stale`,
+`urssaf:cesu:requeue-invalid-credentials`, `urssaf:cesu:outbox:relay`, `urssaf:cesu:outbox:purge`):
 
 - `syncAllEmployerStatuses()` (method 020) to follow the employer accounts and their mandates;
 - `reconcileStaleDeclarations()` to mark declarations stuck in `submitting` as `outcome_unknown`;
@@ -61,6 +63,16 @@ check it on cesu.urssaf.fr, then call `resolveDeclarationOutcome()` (`asDeclared
 The builder only calls public constructors: wire the classes yourself when you need another combination.
 
 ```php
+use TheBeardedBear\UrssafTierceDeclarationCesu\Application\Command\DeclareSalaryHandler;
+use TheBeardedBear\UrssafTierceDeclarationCesu\Application\Command\RegisterEmployerHandler;
+use TheBeardedBear\UrssafTierceDeclarationCesu\Application\Service\DeclarationSubmitter;
+use TheBeardedBear\UrssafTierceDeclarationCesu\Application\Service\MandateGuard;
+use TheBeardedBear\UrssafTierceDeclarationCesu\Application\Service\UnitOfWork;
+use TheBeardedBear\UrssafTierceDeclarationCesu\Infrastructure\Logging\PsrLoggerFailureReporter;
+use TheBeardedBear\UrssafTierceDeclarationCesu\Infrastructure\Transaction\ImmediateTransactionManager;
+use TheBeardedBear\UrssafTierceDeclarationCesu\Infrastructure\Urssaf\GatewayOptions;
+use TheBeardedBear\UrssafTierceDeclarationCesu\Infrastructure\Urssaf\UrssafGatewayFactory;
+
 $gateway = UrssafGatewayFactory::createWith($transport, $credentials, $tokenStore, $configuration, GatewayOptions::defaults()->withClock($clock));
 $unitOfWork = new UnitOfWork(new ImmediateTransactionManager(), $eventPublisher, new PsrLoggerFailureReporter($logger), $outbox);
 

@@ -47,6 +47,7 @@ OAuth2 client credentials, scope `tiersdecl.cesu`, base URL `https://api.urssaf.
 - [docs/workflow.md](docs/workflow.md) — employer, mandate and declaration lifecycles, idempotency, retries, monitoring.
 - [docs/integration-events.md](docs/integration-events.md) — public integration events (`urssaf.cesu.*`) and the outbox.
 - [docs/standalone.md](docs/standalone.md) — wiring without the Symfony bundle: builder options, scheduling, manual wiring.
+- [docs/symfony.md](docs/symfony.md) — Symfony bundle: configuration reference, console commands, Messenger, Scheduler, locks, validation, translations.
 - [docs/testing.md](docs/testing.md) — testing a host application with the in-memory simulated gateway.
 - [docs/openapi/](docs/openapi/) — official OpenAPI contract(s) from the URSSAF API portal.
 - `docs/reference/` — official URSSAF documentation: not versioned (URSSAF documents), download it from the links in [docs/api-reference.md](docs/api-reference.md) into this local, git-ignored folder.
@@ -109,7 +110,7 @@ use TheBeardedBear\UrssafTierceDeclarationCesu\Standalone\UrssafTierceDeclaratio
 $factory = new Psr17Factory();
 $urssaf = UrssafTierceDeclarationCesuBuilder::create(
     new HttpTransport($psr18Client, $factory, $factory),   // any PSR-18 client and PSR-17 factories
-    new InMemoryCredentialsProvider(['tenant-1' => Credentials::of(getenv('URSSAF_CLIENT_ID'), getenv('URSSAF_CLIENT_SECRET'))]),
+    new InMemoryCredentialsProvider(['tenant-1' => Credentials::of((string) getenv('URSSAF_CLIENT_ID'), (string) getenv('URSSAF_CLIENT_SECRET'))]),
     ApiConfiguration::forEnvironment(Environment::Sandbox),
 )
     ->withRepositories($accounts, $mandates, $declarations, $transactions, $statistics) // default: in-memory (tests, prototypes)
@@ -132,9 +133,81 @@ The other use cases are one accessor away: `verifyEmployer()`, `verifyEmployee()
 option of the builder and the manual wiring are described in [docs/standalone.md](docs/standalone.md); test your
 integration with the simulator ([docs/testing.md](docs/testing.md)).
 
+## Quick start B: Symfony
+
+With Symfony Flex, the recipe registers the bundle, copies the configuration and adds the variables to `.env`:
+
+```sh
+composer require thebeardedbear/urssaf-tierce-declaration-cesu
+```
+
+Without the recipe (or before it is published), do it by hand. Register the bundle in `config/bundles.php`:
+
+```php
+return [
+    // ...
+    TheBeardedBear\UrssafTierceDeclarationCesu\Bridge\Symfony\UrssafTierceDeclarationCesuBundle::class => ['all' => true],
+];
+```
+
+Configure it in `config/packages/urssaf_tierce_declaration_cesu.yaml` (every option is described in
+[docs/symfony.md](docs/symfony.md)):
+
+```yaml
+framework:
+    cache:
+        pools:
+            urssaf_cesu.token_cache:            # the access tokens, shared by every process (web, workers, cron)
+                adapter: cache.adapter.redis
+                provider: '%env(REDIS_DSN)%'
+
+urssaf_tierce_declaration_cesu:
+    environment: '%env(URSSAF_CESU_ENV)%'      # sandbox | production
+    credentials:
+        default:                                # one entry per platform account (tenant)
+            client_id: '%env(URSSAF_CESU_CLIENT_ID)%'
+            client_secret: '%env(URSSAF_CESU_CLIENT_SECRET)%'
+    token_store: { cache_pool: urssaf_cesu.token_cache }
+    # persistence: { driver: custom, employer_account_repository: ..., mandate_repository: ..., declaration_record_repository: ... }
+
+when@test:
+    urssaf_tierce_declaration_cesu:
+        gateway: { simulated: true }            # the in-memory URSSAF platform: nothing is sent to URSSAF
+```
+
+and set the variables in `.env.local` (never commit the secret):
+
+```dotenv
+URSSAF_CESU_ENV=sandbox
+URSSAF_CESU_CLIENT_ID=
+URSSAF_CESU_CLIENT_SECRET=
+```
+
+The use case handlers are public services, ready to be injected:
+
+```php
+#[Route('/declarations/{reference}', methods: ['PUT'])]
+public function declare(string $reference, #[MapRequestPayload] DeclarationDraft $draft, DeclareSalaryHandler $declareSalary): Response
+{
+    $submission = $declareSalary(new DeclareSalary(TenantId::fromString('default'), ExternalReference::fromString($reference), $draft));
+
+    return $this->json(['state' => $submission->outcome->value]);
+}
+```
+
+Check the installation, then run the safety commands from cron or the Symfony Scheduler:
+
+```sh
+php bin/console urssaf:cesu:check
+php bin/console urssaf:cesu:employers:sync-status
+```
+
+The default persistence (`in_memory`) loses every record when the process ends: give your own repositories (`custom`
+driver) before going further, see [docs/symfony.md](docs/symfony.md#persistence).
+
 ## Requirements
 
-PHP 8.2+. Development only needs Docker: every `make` target runs in a container.
+PHP 8.2+. Symfony 6.4 / 7.x for the bundle (optional). Development only needs Docker: every `make` target runs in a container.
 
 ## Development
 

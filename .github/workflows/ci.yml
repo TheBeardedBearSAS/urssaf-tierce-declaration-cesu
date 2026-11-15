@@ -87,6 +87,21 @@ jobs:
           hadolint/hadolint:v2.15.1@sha256:32dac94127fd60b7b7e3fbfc65e1383b9b5e25c9bfd7b8536de7a539fe68a12d
           hadolint docker/php/Dockerfile
 
+  flex-endpoint:
+    # Builds the Flex endpoint of the recipe (recipe/) to check it; the recipe itself is published in symfony/recipes-contrib.
+    name: flex endpoint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup
+        with:
+          php-version: '8.4'
+      - run: bin/build-flex-endpoint var/flex-endpoint https://flex.invalid/urssaf-cesu
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: flex-endpoint
+          path: var/flex-endpoint
+
   tests:
     name: tests (PHP ${{ matrix.php }}, ${{ matrix.dependencies }})
     runs-on: ubuntu-latest

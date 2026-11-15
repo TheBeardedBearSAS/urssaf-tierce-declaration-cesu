@@ -1,0 +1,81 @@
+<?php
+
+declare(strict_types=1);
+
+namespace TheBeardedBear\UrssafTierceDeclarationCesu\Bridge\Symfony\Command;
+
+use Override;
+use Symfony\Component\Console\Attribute\AsCommand;
+use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\Helper\Table;
+use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Output\OutputInterface;
+use TheBeardedBear\UrssafTierceDeclarationCesu\Application\Command\RequeueAfterInvalidCredentials;
+use TheBeardedBear\UrssafTierceDeclarationCesu\Application\Command\RequeueAfterInvalidCredentialsHandler;
+use TheBeardedBear\UrssafTierceDeclarationCesu\Application\Policy\WorkflowPolicy;
+use TheBeardedBear\UrssafTierceDeclarationCesu\Bridge\Symfony\Lock\OperationLocks;
+use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Declaration\DeclarationRecord;
+use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Declaration\DeclarationRecordRepository;
+use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Declaration\DeclarationState;
+
+/**
+ * Moves the declarations refused for invalid credentials back to pending, after the credentials were fixed. They are
+ * then sent again with DeclareSalary.
+ *
+ * Source: reference RequeueInvalidCredentialsCommand, lot 6 design §5.4.
+ */
+#[AsCommand(name: 'urssaf:cesu:requeue-invalid-credentials', description: 'Move the declarations refused for invalid credentials back to pending (after fixing the credentials)')]
+final class RequeueInvalidCredentialsCommand extends Command
+{
+    /**
+     * @param list<string> $configuredTenants
+     */
+    public function __construct(
+        private readonly DeclarationRecordRepository $declarations,
+        private readonly RequeueAfterInvalidCredentialsHandler $requeue,
+        private readonly WorkflowPolicy $policy,
+        private readonly OperationLocks $locks,
+        private readonly array $configuredTenants,
+    ) {
+        parent::__construct();
+    }
+
+    #[Override]
+    protected function configure(): void
+    {
+        CommandOptions::addTenant($this, 'Tenant id (default: the only configured tenant)');
+        CommandOptions::addLimit($this);
+        CommandOptions::addDryRun($this);
+    }
+
+    #[Override]
+    protected function execute(InputInterface $input, OutputInterface $output): int
+    {
+        return CommandReports::guard($output, function () use ($input, $output): int {
+            $tenant = CommandTenants::tenantOrSingleConfigured($input, $this->configuredTenants);
+            $limit = CommandOptions::limit($input);
+            if (CommandOptions::dryRun($input)) {
+                return CommandReports::renderPlan($output, array_map(
+                    static fn(DeclarationRecord $record): array => [$tenant->value(), $record->id()->value()],
+                    $this->declarations->findByState($tenant, DeclarationState::InvalidCredentials, $this->policy->pageSize($limit)),
+                ));
+            }
+
+            return $this->locks->exclusively(
+                'requeue-invalid-credentials',
+                $tenant->value(),
+                function () use ($output, $tenant, $limit): int {
+                    $report = ($this->requeue)(new RequeueAfterInvalidCredentials($tenant, $limit));
+                    $table = new Table($output);
+                    $table->setHeaders(['Records', 'Requeued']);
+                    $table->setRows([['declarations', $report->declarations]]);
+                    $table->render();
+                    $output->writeln('The requeued declarations are pending: send them again with DeclareSalary.');
+
+                    return Command::SUCCESS;
+                },
+                static fn(string $resource): int => CommandReports::renderBusy($output, $resource),
+            );
+        });
+    }
+}

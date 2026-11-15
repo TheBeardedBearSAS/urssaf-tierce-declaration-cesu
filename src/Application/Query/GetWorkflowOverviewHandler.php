@@ -27,18 +27,23 @@ final readonly class GetWorkflowOverviewHandler
         $employers = $this->byTenant($this->statistics->employerStages(), $query);
         $mandates = $this->byTenant($this->statistics->mandateStates(), $query);
         $declarations = $this->byTenant($this->statistics->declarationStates(), $query);
-        // A numeric tenant id ("123") becomes an int array key; the callback below (called by array_map, weak mode) takes it back as a string.
+        // A numeric tenant id ("123") becomes an int array key: the keys are cast back to strings explicitly.
         $tenants = $query->tenantId instanceof TenantId
             ? [$query->tenantId->value()]
-            : array_keys($employers + $mandates + $declarations);
+            : array_map(strval(...), array_keys($employers + $mandates + $declarations));
         sort($tenants, SORT_STRING);
 
-        return array_map(static fn(string $tenant): TenantOverview => new TenantOverview(
-            $tenant,
-            [...self::zeros(EmployerStage::cases()), ...$employers[$tenant] ?? []],
-            [...self::zeros(MandateState::cases()), ...$mandates[$tenant] ?? []],
-            [...self::zeros(DeclarationState::cases()), ...$declarations[$tenant] ?? []],
-        ), $tenants);
+        $overviews = [];
+        foreach ($tenants as $tenant) {
+            $overviews[] = new TenantOverview(
+                $tenant,
+                [...self::zeros(EmployerStage::cases()), ...$employers[$tenant] ?? []],
+                [...self::zeros(MandateState::cases()), ...$mandates[$tenant] ?? []],
+                [...self::zeros(DeclarationState::cases()), ...$declarations[$tenant] ?? []],
+            );
+        }
+
+        return $overviews;
     }
 
     /**

@@ -90,6 +90,29 @@ $urssaf->isAiciActive($cesuNumber);                // bool
 
 The inspection never exposes personal data (ADR 0007): operations, Cesu numbers, declaration ids and booleans only.
 
+## Symfony
+
+With the bundle ([symfony.md](symfony.md)), enable the simulator for the test environment only (the Flex recipe does it):
+
+```yaml
+when@test:
+    urssaf_tierce_declaration_cesu:
+        gateway: { simulated: true }
+```
+
+The `SimulatedCesuGateway` is then the `CesuGateway` of the application, and a **public** service to script the
+scenarios; nothing is sent to URSSAF, the HTTP client is not used:
+
+```php
+$urssaf = static::getContainer()->get(SimulatedCesuGateway::class);
+$urssaf->knowEmployer($employer);
+$urssaf->refuseNext(Operation::DeclareSalary, 'RIB_ABSENT', 'Absence de RIB', null);
+```
+
+`gateway.simulated` is refused with `environment: production`: at build time for the literal value, and when the gateway
+is first used (`LogicException`) when the environment is an `%env()%` placeholder that resolves to `production`.
+`urssaf:cesu:check` reports a warning instead of authenticating.
+
 ## Without Symfony
 
 ```php

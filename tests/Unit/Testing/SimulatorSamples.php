@@ -91,23 +91,12 @@ final class SimulatorSamples
 
     public static function aiciRequest(): AiciActivationRequest
     {
-        $sample = GatewaySamples::aiciActivation();
-
-        return new AiciActivationRequest(
-            self::employer(),
-            $sample->civility(),
-            $sample->birthName(),
-            $sample->usageName(),
-            $sample->firstName(),
-            $sample->birthCountry(),
-            $sample->birthMunicipalityCode(),
-            $sample->birthMunicipalityName(),
-        );
+        return self::aiciRequestFor(self::employer());
     }
 
     public static function aiciRequestFor(Employer $employer): AiciActivationRequest
     {
-        $sample = self::aiciRequest();
+        $sample = GatewaySamples::aiciActivation();
 
         return new AiciActivationRequest(
             $employer,

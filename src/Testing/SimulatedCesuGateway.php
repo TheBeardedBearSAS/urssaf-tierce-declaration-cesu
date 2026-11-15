@@ -77,6 +77,31 @@ final class SimulatedCesuGateway implements CesuGateway
 
     public const DEFAULT_EMPLOYEE_CONTRIBUTIONS_CENTS = 2009;
 
+    /** Message of ERR_METIER, verbatim from the specification (leading space, sic). */
+    private const MESSAGE_BUSINESS_ERROR = ' Une erreur métier est survenue';
+
+    /** Message of the ERR_METIER of the Cesu+ eligibility checks of method 050, verbatim from the specification. */
+    private const MESSAGE_CESU_PLUS_BUSINESS_ERROR = 'Une erreur métier cesu+ est survenue';
+
+    /** Business errors that the specification documents with the "cesu+" message (api-reference §2.7). */
+    private const CESU_PLUS_ELIGIBILITY_ERRORS = [
+        BusinessError::EmployerBankDetailsInactive,
+        BusinessError::EmployerOnlineAccountAnomaly,
+        BusinessError::EmployerAccountAnomaly,
+        BusinessError::CesuPlusDeactivatedByEmployer,
+        BusinessError::UnpaidSalary,
+        BusinessError::UnpaidContributions,
+        BusinessError::EmployeeBankDetailsInactive,
+        BusinessError::EmployeeOnlineAccountAnomaly,
+        BusinessError::EmployeeAccountAnomaly,
+        BusinessError::CesuPlusDeactivated,
+        BusinessError::IdenticalBankDetails,
+        BusinessError::IdenticalCivilStatus,
+        BusinessError::PairAnomaly,
+        BusinessError::CesuPlusDeadlineExceeded,
+        BusinessError::CesuPlusNetSalaryCeilingExceeded,
+    ];
+
     private readonly SimulatedScript $script;
 
     private readonly SimulatedSequence $cesuNumbers;
@@ -542,7 +567,9 @@ final class SimulatedCesuGateway implements CesuGateway
 
     private static function businessErrors(BusinessError $error): ApiErrors
     {
-        return ApiErrors::of(ApiError::of(ApiErrorCode::Business->value, 'Erreur métier', BusinessErrorCatalogue::text($error)));
+        $message = \in_array($error, self::CESU_PLUS_ELIGIBILITY_ERRORS, true) ? self::MESSAGE_CESU_PLUS_BUSINESS_ERROR : self::MESSAGE_BUSINESS_ERROR;
+
+        return ApiErrors::of(ApiError::of(ApiErrorCode::Business->value, $message, BusinessErrorCatalogue::text($error)));
     }
 
     private static function mandateMissing(): ApiErrors
