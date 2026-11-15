@@ -15,6 +15,7 @@ interface TransactionManager
      * @template T
      *
      * @param callable(): T $operation
+     * @param-immediately-invoked-callable $operation
      *
      * @return T
      *

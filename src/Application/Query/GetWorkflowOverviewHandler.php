@@ -27,6 +27,7 @@ final readonly class GetWorkflowOverviewHandler
         $employers = $this->byTenant($this->statistics->employerStages(), $query);
         $mandates = $this->byTenant($this->statistics->mandateStates(), $query);
         $declarations = $this->byTenant($this->statistics->declarationStates(), $query);
+        // A numeric tenant id ("123") becomes an int array key; the callback below (called by array_map, weak mode) takes it back as a string.
         $tenants = $query->tenantId instanceof TenantId
             ? [$query->tenantId->value()]
             : array_keys($employers + $mandates + $declarations);
