@@ -19,6 +19,8 @@ some without accents in the Swagger); everything else in the package is English.
 
 > Status: specification only. Nothing below is implemented yet; see [roadmap.md](roadmap.md).
 
+Local lifecycles, idempotency and retries: [workflow.md](workflow.md). Public integration events: [integration-events.md](integration-events.md).
+
 Wording used below: *PE* = particulier employeur (private employer), *SP* = salarié particulier (employee), *AF* =
 accueillant familial (family foster carer), *AICI* = avance immédiate du crédit d'impôt (immediate tax credit advance),
 *PAS* = prélèvement à la source (withholding at source, art. 204A CGI), *NIR* = social security number.

@@ -11,6 +11,12 @@ without inventing rules absent from the specification.
 
 - `Application\Service\MandateGuard` refuses 050 and 060 (`MandateRequired`) when no non-cancelled local mandate exists
   for the employer, unless the command sets `skipMandateCheck: true` (policy default `requireLocalMandate: true`).
+- Amendment (2026-11-15, lead-accepted): the guard also passes for an employer mandated outside the package: when the
+  package never handled a mandate of the employer (`MandateRepository::findByEmployer()` is empty) **and** the tracked
+  account stage is `mandate_confirmed` or `aici_active` (the last 020 answer reported `mandatPresent`, "locally known"
+  in the sense of api-reference §4.10). As soon as a local mandate exists, even cancelled, only a non-cancelled local
+  mandate passes (a 020 still reporting the mandate after a local 031 does not reopen the guard). 020 never creates a
+  mandate locally.
 - `typeEmploi = AF` declarations are refused locally (`declaration.foster_carer_unsupported`) unless
   `WorkflowPolicy::allowFosterCarerDeclarations()` is enabled.
 - Local validation covers the contract bounds (lengths, ranges, multiples, enums, patterns), the address rules of PDF

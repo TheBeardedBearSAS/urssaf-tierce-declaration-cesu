@@ -1,0 +1,17 @@
+<?php
+
+declare(strict_types=1);
+
+namespace TheBeardedBear\UrssafTierceDeclarationCesu\Application\Command;
+
+use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Shared\TenantId;
+
+/**
+ * Reads the URSSAF status (method 020, employer only) of the least recently checked employers of a tenant.
+ *
+ * The limit is capped by the workflow policy (default page size when null).
+ */
+final readonly class SyncEmployerStatuses
+{
+    public function __construct(public TenantId $tenantId, public ?int $limit) {}
+}

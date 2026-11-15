@@ -40,6 +40,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   v4 generator, no-op and sliding-window (2 500 calls/hour per tenant, ADR 0011) rate limiters, in-memory credentials
   provider, PSR-3 failure reporter. Runtime dependencies psr/cache, psr/clock, psr/http-client, psr/http-factory,
   psr/http-message, psr/log, psr/simple-cache.
+- Application layer (src/Application): use cases RegisterEmployer (010, synchronous, bank details never stored), ImportEmployer, RegisterMandate (030), CancelMandate (031), SyncEmployerStatus / SyncEmployerStatuses / SyncAllEmployerStatuses (020), ActivateCesuPlus (060), ActivateAici (070), DeclareSalary (050: idempotent per tenant and external reference with a content fingerprint, mandate guard, atomic claim, unknown outcomes never resent), ResolveDeclarationOutcome, ReconcileStaleDeclarations, RequeueAfterInvalidCredentials, RelayOutbox, PurgeOutbox; queries VerifyEmployer, VerifyEmployee, EstimateContributions, GetEmployerAccount, GetDeclaration, FindDeclarations, GetWorkflowOverview; WorkflowPolicy; UnitOfWork with domain events published after commit and integration events written to an outbox. Public integration events urssaf.cesu.* (Contract\Event, ADR 0012) and IntegrationEventCodec. In-memory repositories, workflow statistics and outbox, PSR-14 event publisher and integration event sink, immediate transaction manager. Runtime dependency psr/event-dispatcher.
+- Documentation: docs/workflow.md (lifecycles, idempotency, retries, monitoring) and docs/integration-events.md (event catalogue, outbox, relay); ADR 0006, 0009, 0012 and 0000 amendments (2026-11-15).
 
 ### Changed
 
