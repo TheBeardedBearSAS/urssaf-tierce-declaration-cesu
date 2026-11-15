@@ -16,6 +16,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Signed releases (workflow `release.yml`): each GitHub release carries the distribution archive, its `SHA256SUMS`
   and a SLSA build provenance attestation (`*.intoto.jsonl`, Sigstore); see *Verifying a release* in SECURITY.md.
 - CodeQL analysis of the GitHub Actions workflows (workflow `codeql.yml`) on every pull request and push to `main`.
+- Architecture decision records (`docs/adr/`): the architecture inherited from `thebeardedbear/urssaf-tiers-prestations`
+  (ADR 0000) and the CESU-specific decisions (ADR 0001 to 0012).
 
 ### Changed
 
@@ -31,3 +33,4 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - The package is open source under the MIT license (previously proprietary). Added `CONTRIBUTING.md` and
   `SECURITY.md`, and a notice in the README stating that the package is unofficial and not affiliated with URSSAF.
+- README: architecture overview and the sandbox contract test variables referenced by `CONTRIBUTING.md`.
