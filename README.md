@@ -20,8 +20,8 @@ Developed and maintained by [The Bearded Bear](https://the-bearded-bear.com).
 > process; the URSSAF documentation remains the authority on the API, and you remain responsible for the data your
 > application sends to URSSAF.
 
-> 🚧 **Skeleton — not implemented yet.** This repository currently contains the tooling and the specification only.
-> The implementation follows [docs/roadmap.md](docs/roadmap.md).
+> 🚧 **Work in progress — not released yet.** The implementation follows [docs/roadmap.md](docs/roadmap.md) and the
+> architecture decision records in [docs/adr/](docs/adr/).
 
 ## Scope
 
@@ -48,6 +48,43 @@ OAuth2 client credentials, scope `tiersdecl.cesu`, base URL `https://api.urssaf.
 - `docs/reference/` — official URSSAF documentation: not versioned (URSSAF documents), download it from the links in [docs/api-reference.md](docs/api-reference.md) into this local, git-ignored folder.
 - Catalogue page: https://portailapi.urssaf.fr/fr/catalogue-api/prd/td-cesu
 
+## Architecture
+
+Hexagonal / DDD, the same as `thebeardedbear/urssaf-tiers-prestations` ([ADR 0000](docs/adr/0000-reference-architecture.md)).
+Layers are enforced by Deptrac (`deptrac.yaml`):
+
+```
+            +-----------------------------------------------+
+            | Bridge (Symfony, Doctrine)  - framework glue  |
+            +----------------------+------------------------+
+                                   |
+            +----------------------v------------------------+
+            | Infrastructure - HTTP gateway, OAuth2, wire   |
+            | encoding, token stores, clock, ids, in-memory |
+            +----------------------+------------------------+
+                                   | implements ports
+            +----------------------v------------------------+
+            | Application - commands, queries, handlers,    |
+            | ports (CesuGateway, repositories...), DTOs    |
+            +----------------------+------------------------+
+                                   |
+            +----------------------v------------------------+
+            | Domain - aggregates, value objects, rules     |
+            | (pure PHP, no PSR, no framework)              |
+            +-----------------------------------------------+
+```
+
+- **Domain**: employers, mandates, declarations (sum type `StandardDeclaration|CesuPlusDeclaration`), value objects
+  (`CalendarDate`, `Money` in cents, `Address`...), validation, domain events.
+- **Contract**: public, versioned integration events relayed through the outbox.
+- **Application**: one `final readonly` handler per use case, ports implemented by the outer layers.
+- **Infrastructure**: `UrssafHttpGateway` (implements `CesuGateway`), OAuth2 token provider, JSON client, adapters.
+- **Standalone** / **Testing**: framework-free builder and an in-memory simulated gateway for host test suites.
+- **Bridge**: `Bridge\Symfony` (bundle, commands, Messenger, Lock, Scheduler) and `Bridge\Doctrine` (mapping, types,
+  repositories).
+
+Decisions: [docs/adr/](docs/adr/).
+
 ## Requirements
 
 PHP 8.2+. Development only needs Docker: every `make` target runs in a container.
@@ -68,6 +105,22 @@ Once the repository is public, `main` publishes its quality proofs, linked from 
 coverage report on Codecov, the full mutation report on the Stryker Dashboard, the SonarQube Cloud quality gate and the
 OpenSSF Scorecard. The benchmarks (`tests/Benchmark`, PHPBench in `tools/phpbench`, out of the package dependencies)
 run on every pull request against the base commit, and the job fails on a regression of more than 20 %.
+## Sandbox contract tests
+
+`make test-contract` runs the `contract` suite against the URSSAF sandbox. It is opt-in and skipped when the
+credentials are missing. Variables (environment of the shell running `make`, or GitHub secrets / variables of the
+`urssaf-sandbox` environment for the manual `contract` CI job):
+
+| Variable | Required | Meaning |
+|---|---|---|
+| `URSSAF_SANDBOX_CLIENT_ID` | yes | OAuth2 client id of your sandbox subscription (secret) |
+| `URSSAF_SANDBOX_CLIENT_SECRET` | yes | OAuth2 client secret (secret) |
+| `URSSAF_SANDBOX_BASE_URI` | no | sandbox host override (default `https://api-edi.urssaf.fr`) |
+| `URSSAF_SANDBOX_EMPLOYER_CESU_NUMBER` | no | a sandbox employer Cesu number (enables the employer tests) |
+| `URSSAF_SANDBOX_EMPLOYER_BIRTH_DATE` | no | its birth date, `YYYY-MM-DD` |
+| `URSSAF_SANDBOX_EMPLOYEE_CESU_NUMBER` | no | a sandbox employee Cesu number (enables the employee tests) |
+
+Never commit these values.
 
 ## Versioning
 
