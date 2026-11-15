@@ -62,6 +62,9 @@ Consequences).
 - Personal and banking data storage — ADR 0007.
 - `accord` encoding configurable — ADR 0008.
 - Mandate guard and AF fail-fast opt-outs — ADR 0009.
+- `ApiConfiguration` keeps the reference public constructor with defaulted parameters plus `forEnvironment()`, and
+  carries more settings (optional request-id and application-id headers, `accord` encoding, business time zone
+  instead of the pairing time zone); header names are validated by `HttpHeader`. (lead-accepted 2026-11-15)
 - Wire mappers are split per direction (`…RequestMapper` / `…ResponseMapper`) instead of one class per operation (lot 2).
 
 ## Not applicable

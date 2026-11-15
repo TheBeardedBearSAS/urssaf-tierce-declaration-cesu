@@ -61,6 +61,14 @@ parameters:
         noNullableReturnTypeDeclaration:
             enabled: false
 
+    ignoreErrors:
+        # Optional settings of ApiConfiguration (request-id / application-id headers, base URI override) default to null
+        # = not configured, so that `new ApiConfiguration($environment)` works: public constructor with optional defaulted
+        # parameters, like the reference ApiConfiguration (lot 3 lead decision).
+        -
+            identifier: ergebnis.noParameterWithNullDefaultValue
+            path: src/Infrastructure/Urssaf/ApiConfiguration.php
+
     shipmonkRules:
         enableAllRules: true
 

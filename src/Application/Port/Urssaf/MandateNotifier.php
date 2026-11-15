@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace TheBeardedBear\UrssafTierceDeclarationCesu\Application\Port\Urssaf;
 
+use SensitiveParameter;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Application\Port\RateLimitExceeded;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Employer\Employer;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Exception\UrssafException;
@@ -26,7 +27,7 @@ interface MandateNotifier
      *
      * Any other {@see UrssafException} means URSSAF answered something the contract does not describe.
      */
-    public function registerMandate(TenantId $tenantId, Employer $employer): void;
+    public function registerMandate(TenantId $tenantId, #[SensitiveParameter] Employer $employer): void;
 
     /**
      * Cancels the mandate. See {@see UrssafRequestRejected::isMandateHeldElsewhere()} and
@@ -39,5 +40,5 @@ interface MandateNotifier
      *
      * Any other {@see UrssafException} means URSSAF answered something the contract does not describe.
      */
-    public function cancelMandate(TenantId $tenantId, Employer $employer): void;
+    public function cancelMandate(TenantId $tenantId, #[SensitiveParameter] Employer $employer): void;
 }

@@ -32,6 +32,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   (ADR 0012). Wire layer (src/Infrastructure/Urssaf/Wire): defensive JSON payload reader, float-free JSON encoder,
   date-only dates (ADR 0001), amounts in cents, half-days, query parameters and accord encoding (ADR 0008), request and
   response mappers of every operation, error payload parser, ERR_METIER classifier and error code catalogue.
+- Infrastructure HTTP gateway (src/Infrastructure/Urssaf): UrssafHttpGateway implementing every CESU operation (010 to
+  070) over PSR-18 / PSR-17, built with UrssafGatewayFactory (HttpTransport, ApiConfiguration, GatewayOptions); OAuth2
+  client credentials with a shared token cache, one replay after a 401, Retry-After, status mapping of ADR 0002, unknown
+  outcomes for 010/050/060/070 (ADR 0003), optional request-id / application-id headers, configurable accord encoding
+  (ADR 0008) and business time zone. Adapters: in-memory, PSR-6 and PSR-16 token stores, PSR-20 and frozen clocks, UUID
+  v4 generator, no-op and sliding-window (2 500 calls/hour per tenant, ADR 0011) rate limiters, in-memory credentials
+  provider, PSR-3 failure reporter. Runtime dependencies psr/cache, psr/clock, psr/http-client, psr/http-factory,
+  psr/http-message, psr/log, psr/simple-cache.
 
 ### Changed
 
