@@ -167,6 +167,19 @@ Consequences to design for:
   when there is nothing to do): `RelayOutbox` (every minute), `PurgeOutbox` (daily), `ReconcileStaleDeclarations`
   (every 15 minutes), `SyncAllEmployerStatuses` (as often as your quota allows) and, after fixing credentials,
   `RequeueAfterInvalidCredentials`.
+  With the Symfony bundle each one is a console command (options: [symfony.md](symfony.md#console-commands)); with the
+  standalone builder call the matching accessor ([standalone.md](standalone.md#scheduling)):
+
+  ```cron
+  0 * * * *      php bin/console urssaf:cesu:employers:sync-status
+  */15 * * * *   php bin/console urssaf:cesu:declarations:reconcile-stale
+  * * * * *      php bin/console urssaf:cesu:outbox:relay
+  0 3 * * *      php bin/console urssaf:cesu:outbox:purge
+  ```
+
+  `urssaf:cesu:requeue-invalid-credentials` is run by hand after fixing the credentials, `urssaf:cesu:declarations:resolve`
+  records the operator's decision on an `outcome_unknown` declaration, and `urssaf:cesu:status` prints the overview of
+  the [Monitoring](#monitoring) section. The bundle can also register these jobs in the Symfony Scheduler.
 - **No overlap.** Runs of the same command must not overlap (a relay in particular); the atomic claims remain the last
   line of defence against a double submission.
 

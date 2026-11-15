@@ -17,7 +17,7 @@ match the API version (the portal showed 2.0.0 at that date), which is why Swagg
 Field names, codes and wire values below are reproduced verbatim from the specification (they are French by design,
 some without accents in the Swagger); everything else in the package is English.
 
-> Status: implemented progressively, see [roadmap.md](roadmap.md).
+> Status: Implemented (not released yet); see [roadmap.md](roadmap.md).
 
 Local lifecycles, idempotency and retries: [workflow.md](workflow.md). Public integration events: [integration-events.md](integration-events.md).
 
@@ -857,160 +857,222 @@ prestations list uses a different coding, do not reuse it).
 
 ## 4. Package decisions derived from the specification
 
+Every decision below is settled and implemented; the ADR linked at the end of each one is its record (index:
+[adr/README.md](adr/README.md)). What the specification leaves unanswered is in §5.
+
 1. **Date encoding.** Every date is date-only `YYYY-MM-DD` (birth dates, employment period, payment date, leave periods,
-   approval dates), modelled as a calendar-date value object without time zone. Rules that compare with "today"
-   (employment start not in the future, Cesu+ deadline on the 15th of the following month) are checked locally in a
-   configurable business time zone, default `Europe/Paris` (*TBD*: URSSAF's reference time zone is not published).
-   Do not reuse the date-time encoding of the Tiers de prestations package.
-2. **Money and quantities.** Amounts (hourly wages, supplements, deposit, estimates and declaration results) are integers
-   in cents internally, encoded as JSON numbers with at most two decimals and parsed from responses without float drift
-   (e.g. `63.1`, `20.09`). Day counts are multiples of 0.5 (stored as half-days); hours are integers. Local checks
-   replicate the contract bounds (§2); SMIC-related and overtime business rules stay server-side (*TBD*: cheap local
-   pre-checks for date order, same month, 40 h / 8 h overtime thresholds and the 10 % paid-leave exclusivity).
-3. **Statuses and states.** State fields of 020 (`etatCompteEnLigne`, `etatMandatSepa`, `etatCesuPlus`) are string enums
-   with an `Unknown(raw)` fallback; `etatCesuPlus` accepts both `active|bloque|desactive` and `activé|bloqué|désactivé`.
-   `motifBlocageCesuPlus` is read from either casing and the string `"null"` is treated as absent. No declaration has a
-   status endpoint: declarations are **not** a state machine on the URSSAF side.
-4. **Local lifecycle (tracking).** `employer registered` (010) → `mandate notified` (030) → `mandate confirmed` when 020
-   returns `mandatPresent = true` → `Cesu+ active` (060 / `etatCesuPlus`) → `AICI active` (070 / `etatAICI`).
-   031 moves back to `mandate cancelled`. State is re-read with 020 rather than trusted from a past write (one platform
-   at a time, the employer can change things on cesu.urssaf.fr).
-5. **Idempotency and retries.** There is no idempotency key and no GET/cancel for declarations. The only guard is the
-   server-side duplicate rule (same employer, employee and employment dates → `ERR_METIER` "Une déclaration est déjà
-   enregistrée pour cette période d’emploi."). Therefore: 050 is **never retried automatically**; on timeout or 5xx the
-   outcome is *unknown* and surfaced as such; a later duplicate error is read as "already declared" (the `idDeclaration` of
-   the first call may be lost) and is reconciled by the caller. 429 is retried with back-off (no `Retry-After` documented).
-   010 is also not retried blindly (e-mail uniqueness). 020, 021, 030, 031, 040 are safe to retry (030/031 *assumed*,
-   see §5).
-6. **Error mapping.** Keep `code`, `message` and `description` raw. Map well-known codes (§3.13) to typed exceptions;
-   `ERR_METIER` is classified by a best-effort table of known `description` texts (texts contain placeholders such as
-   `XX,XX` and may change), with the raw error always available. Both technical spellings (`ERR_TECHNIQUE`,
-   `ERREUR_TECHNIQUE`) are treated as retryable technical errors for reads.
-7. **Employee identification.** Value object with three mutually exclusive modes: Cesu number, NIR, or administrative
-   data (names with the PDF character set, birth date, birth place, country `100` rule); validated locally per §2.3 and
-   §2.7. `numeroCesu` is refused locally on a first declaration only if the package knows the pair is new (otherwise
-   left to the API).
+   approval dates), modelled as `Domain\Shared\CalendarDate`, without time zone. Rules that compare with "today"
+   (employment start not in the future, Cesu+ deadline on the 15th of the following month) are checked locally with the
+   `Clock` port in a configurable business time zone, default `Europe/Paris` (URSSAF's reference time zone is not
+   published, §5.42). The date-time encoding of the Tiers de prestations package is not reused. Settled by
+   [ADR 0001](adr/0001-date-only-encoding.md).
+2. **Money and quantities.** Amounts (hourly wages, supplements, deposit, estimates and declaration results) are
+   integers in cents internally (`Money`), encoded as JSON numbers with at most two decimals and parsed from responses
+   without float drift (e.g. `63.1`, `20.09`). Day counts are multiples of 0.5 (`HalfDays`); hours are integers. Local
+   checks replicate the contract bounds (§2) and the cheap pre-checks of ADR 0009 (date order, same month, 40 h / 8 h
+   overtime thresholds, exclusivity of the 10 % paid leave flag with `heuresCp` / `periodesCongesPayes`); SMIC-related
+   rules, ceilings, deposit, deadline and eligibility stay server-side. Settled by
+   [ADR 0009](adr/0009-guards-and-opt-outs.md); wire encoding in `Infrastructure\Urssaf\Wire` (§5.32).
+3. **Statuses and states.** State fields of 020 (`etatCompteEnLigne`, `etatMandatSepa`, `etatCesuPlus`) are string
+   enums read with `tryFromWire()`, the raw value being kept in `EmployerStatus` when it is unknown; `etatCesuPlus`
+   accepts both `active|bloque|desactive` and `activé|bloqué|désactivé` (§5.1). `motifBlocageCesuPlus` is read from
+   either casing and the string `"null"` is treated as absent (§5.2). No declaration has a status endpoint:
+   declarations are **not** a state machine on the URSSAF side, the state machines are local (decision 4).
+   [ADR 0006](adr/0006-local-lifecycles.md).
+4. **Local lifecycles (tracking).** Three aggregates, each with explicit transitions (invalid ones throw
+   `InvalidStateTransition`), see [workflow.md](workflow.md):
+   - `EmployerAccount` derives an `EmployerStage` from the calls and from 020: `registered` (010 or import) →
+     `mandate_notified` (030) → `mandate_confirmed` (020 `mandatPresent`) → `aici_active` (020 `etatAICI`);
+     `mandate_cancelled` after 031. Stages follow 020 and never block a call. **Cesu+ is not an employer stage**: it is
+     a state of an employer / employee *pair* (020 `etatCesuPlus`), so the snapshot keeps it with the employee Cesu
+     number it was read for.
+   - `Mandate`: `notified` → `confirmed` (020) → `cancelled`; re-notification after a cancellation creates a new
+     mandate.
+   - `DeclarationRecord`: `pending` → `submitting` (atomic claim) → `declared` | `rejected` | `already_declared` |
+     `outcome_unknown` | `error` | `invalid_credentials`.
+
+   State is re-read with 020 (`SyncEmployerStatus`) rather than trusted from a past write (one platform at a time, the
+   employer can change things on cesu.urssaf.fr). [ADR 0006](adr/0006-local-lifecycles.md).
+5. **Idempotency, retries and unknown outcomes.** There is no idempotency key and no GET/cancel for declarations. The
+   only guard is the server-side duplicate rule (same employer, employee and employment dates → `ERR_METIER`
+   "Une déclaration est déjà enregistrée pour cette période d’emploi."). Therefore:
+   - 010, 050, 060 and 070 are **never resent automatically**. A transport error, a 5xx (other than 512) or an
+     unreadable 2xx answer throws `OutcomeUnknown`; the declaration moves to `outcome_unknown` and an operator checks
+     on cesu.urssaf.fr, then records the result (`ResolveDeclarationOutcome`: declared with its `idDeclaration`, or not
+     received → `pending` again). Declarations left `submitting` are moved to `outcome_unknown` by
+     `ReconcileStaleDeclarations`.
+   - A duplicate error on 050 is read as `already_declared` (final; the `idDeclaration` of the first call may be lost).
+   - 020, 021, 040 are safe to retry, 030 and 031 are *assumed* idempotent (§5.17), as is the token call. 429, which
+     proves the call did not reach the service, is retryable on every operation: it is surfaced as a retryable
+     `UrssafUnavailable` carrying the `Retry-After` seconds when present (the package does not sleep, the host or
+     Messenger redelivers with that delay). A first 401 is replayed once with a new token, on every operation.
+   - `DeclareSalary` is idempotent per tenant and external reference, with a content fingerprint that excludes personal
+     data.
+
+   [ADR 0003](adr/0003-retry-and-unknown-outcome.md), [ADR 0006](adr/0006-local-lifecycles.md),
+   [ADR 0002](adr/0002-http-client-adaptations.md).
+6. **Error mapping.** `code`, `message` and `description` are kept raw (`ApiError`). Well-known codes (§3.13) map to
+   typed exceptions and to `ErrorKind`; `ERR_METIER` is classified by a best-effort table of known `description`
+   texts (`BusinessError`, placeholders such as `XX,XX` as wildcards), `null` when unknown. Both technical spellings
+   (`ERR_TECHNIQUE`, `ERREUR_TECHNIQUE`) are technical errors. [ADR 0005](adr/0005-err-metier-classification.md),
+   [ADR 0002](adr/0002-http-client-adaptations.md).
+7. **Employee identification.** `Domain\Employee\EmployeeReference` is a sum type with three mutually exclusive modes
+   (`EmployeeByCesuNumber`, `EmployeeByNir`, `EmployeeByIdentity`: names with the PDF character set, birth date, birth
+   place, country `100` rule), validated locally per §2.3 and §2.7. The PDF rule "a `numeroCesu` cannot be used for the
+   first declaration of a pair" is **not** checked locally: the package keeps no registry of pairs and the NIR and
+   identity data are never stored (ADR 0007), so the API decides (§5.25). [ADR 0004](adr/0004-sum-types.md),
+   [ADR 0007](adr/0007-personal-data.md).
 8. **Country, department, address codes.** Country code is **3 chars** (`100` = France, not the 5-digit `99100` of
-   Tiers de prestations); department is free text of up to 3 chars (`07`, `972`); street types are the 33 values of §3.10.
-   `Adresse` enforces the 32-character line rule and the conditional road fields locally.
-9. **`accord` query parameter (060).** Sent as `true` / `false` as the Swagger types it (TBD: confirm against the sandbox,
-   since the PDF documents `0` / `1` and its example uses `accord=1`).
-10. **Mandate.** `mandat` is a dedicated aggregate (employer number, birth date, platform, dates of 030/031, last
-    `mandatPresent`). The package never sends 050/060 for an employer without a locally known mandate unless the caller
-    opts out (the API reports `MANDAT_INEXISTANT` anyway).
-11. **Cesu / Cesu+ choice.** `typeDeclaration` is derived from an explicit declaration kind in the domain
-    (`StandardDeclaration`, `CesuPlusDeclaration`); `CesuPlusDeclaration` requires a nature code. `AF` declarations are
-    modelled (the contract has them) but flagged unsupported by the API (§1.2); the package fails fast locally unless
-    the caller opts in.
+   Tiers de prestations); department is free text of up to 3 chars (`07`, `972`); street types are the 33 values of
+   §3.10. `Address` enforces the 32-character line rule and the conditional road fields locally. Permissive formats:
+   §5.30.
+9. **`accord` query parameter (060).** Sent as `true` / `false` by default (as the Swagger types it) and as `1` / `0`
+   with `AgreementEncoding::Numeric` (bundle key `agreement_encoding: boolean|numeric`); which one the API requires
+   is §5.6. [ADR 0008](adr/0008-accord-encoding.md).
+10. **Mandate.** `Mandate` is a dedicated aggregate (employer, dates of 030/031, state). `MandateGuard` refuses
+    050 and 060 (`MandateRequired`, no URSSAF call) unless a non-cancelled local mandate exists **or** the package never
+    handled a mandate of the employer *and* the tracked stage is `mandate_confirmed` or `aici_active` (the last 020
+    answer reported `mandatPresent`: an employer mandated outside the package). Once a local mandate exists, even
+    cancelled, only a non-cancelled one passes. Opt out per command with `skipMandateCheck: true`, or globally with
+    `WorkflowPolicy::requireLocalMandate = false`; the API reports `MANDAT_INEXISTANT` anyway.
+    [ADR 0009](adr/0009-guards-and-opt-outs.md).
+11. **Cesu / Cesu+ choice.** `typeDeclaration` is derived from the declaration kind in the domain
+    (`StandardDeclaration` = 0, `CesuPlusDeclaration` = 1, which requires a nature code). `AF` declarations are
+    modelled (the contract has them) but flagged unsupported by the API (§1.2, §5.21): they are refused locally
+    (`declaration.foster_carer_unsupported`) unless `WorkflowPolicy::allowFosterCarerDeclarations()` is enabled.
+    [ADR 0004](adr/0004-sum-types.md), [ADR 0009](adr/0009-guards-and-opt-outs.md).
 12. **Personal and banking data.** `nir`, names, birth dates, e-mail, phone, address, `iban`, `bic` are personal data:
-    never logged, masked in exceptions. IBAN/BIC are only structurally pre-checked (length), the real checks are
-    server-side.
+    masked in `__debugInfo`, never logged, never put in exception messages (transport failures keep only the class
+    name of the PSR-18 exception). IBAN and BIC are never persisted (010 is synchronous) and only structurally
+    pre-checked (length); the NIR and the employee identity are never persisted; the employer Cesu number and birth
+    date are. [ADR 0007](adr/0007-personal-data.md), [ADR 0014](adr/0014-doctrine-bridge.md).
 13. **Shared model.** CESU, PAJE and AE share `/tiersdecl/v1` and the mandate model; a shared library may be extracted
-    later, out of scope here.
+    later, out of scope here ([roadmap.md](roadmap.md)).
+14. **Tenants, quotas, events, bridges.** A tenant is one set of OAuth2 credentials ([ADR 0010](adr/0010-tenant-model.md)).
+    The documented quota (2 500 calls per hour, §1.1) is enforced by an opt-out sliding-window rate limiter per tenant
+    and process, no per-operation limit is invented ([ADR 0011](adr/0011-quotas-and-rate-limit.md)). Public versioned
+    integration events go through an outbox ([ADR 0012](adr/0012-integration-events.md)). Framework glue:
+    [ADR 0013](adr/0013-symfony-bridge.md) (Symfony) and [ADR 0014](adr/0014-doctrine-bridge.md) (Doctrine).
 
 ---
 
 ## 5. Open points
 
-Points observed by the live sandbox suite are settled with `make test-contract` (see `var/contract/sandbox-report.json` and the README, "Sandbox contract tests").
+Status of each point, after the implementation:
+
+- **Open**: only URSSAF or the sandbox can answer. The *report point* is the id under which the contract suite
+  (`make test-contract`, report `var/contract/sandbox-report.json`, README "Sandbox contract tests") records what the
+  sandbox answers; running it settles the point. "No report point" means the suite cannot observe it.
+- **Decided**: the package took a position (ADR linked) and nothing is left to confirm.
+- **Assumption**: the package behaves as described until the sandbox answers; the report point that confirms it is given.
+
+The sandbox contract run has not been done yet: every **Open** point is still open. Points without a report id can
+only be settled by experience with real declarations, or by URSSAF.
 
 Discrepancies Swagger v2.0.0 / PDF v2.0.2 (prd and sb contracts are otherwise identical):
 
 1. `etatCesuPlus`: `active` / `bloque` / `desactive` (Swagger) vs `activé` / `bloqué` / `désactivé` (PDF, including its
-   example). To confirm on the sandbox; the package accepts both meanwhile.
-2. `motifBlocageCesuPlus` (Swagger) vs `motifblocageCesuPlus` (PDF); the PDF example holds the string `"null"`.
+   example). To confirm on the sandbox; the package accepts both meanwhile. **Open** (report point `5.1-etatCesuPlus`). The package accepts both spellings meanwhile (§4.3).
+2. `motifBlocageCesuPlus` (Swagger) vs `motifblocageCesuPlus` (PDF); the PDF example holds the string `"null"`. **Open** (report point `5.2-motifBlocage`). Both casings are read meanwhile.
 3. Name patterns (`nom`, `prenom`, `nomNaissance`, `nomUsage`, `villeNaissance`) are ASCII-folded and degenerate in the
    Swagger JSON; the accented PDF pattern is used. The PDF also prints the model name as `Rib` / fields as `Inscrit`,
-   `NirSala`, `PrenomSala`, `Nir`, `Accord` (capitalisation typos; the Swagger names are used).
+   `NirSala`, `PrenomSala`, `Nir`, `Accord` (capitalisation typos; the Swagger names are used). **Decided:** the accented PDF pattern and the Swagger names are used; nothing to settle.
 4. `natureActivite`: max length 2 (Swagger) vs 3 (PDF); `montantAcompte` minimum 0.01 only in the Swagger;
    `ComplementSalaire.montant` required only in PDF v2.0.2 (Swagger requires `codeCategorie` and `codeSousCategorie`);
    `Adresse.codePostal` mandatory in the PDF text only; `InputActivationAici.codeCivilite` has length 1–2 and no enum while
-   `codeCivilite` elsewhere is the enum `["1","2"]`; `telephone` has a 10-char minimum on `InfosSalarie` only.
-5. `codeZoneGeographique`: 10 values in the Swagger enum, 3 in PDF §4.2 (labels of the 7 others unknown).
+   `codeCivilite` elsewhere is the enum `["1","2"]`; `telephone` has a 10-char minimum on `InfosSalarie` only. **Open**, no report point (the contract suite cannot observe it).
+5. `codeZoneGeographique`: 10 values in the Swagger enum, 3 in PDF §4.2 (labels of the 7 others unknown). **Open**, no report point (the contract suite cannot observe it).
 6. 060 / 070: the PDF table says `numeroCesu` is a query parameter, the path is `/employeurs/{numeroCesu}/…`; `accord` is `0/1`
-   in the PDF (and its example) but `boolean` in the Swagger.
+   in the PDF (and its example) but `boolean` in the Swagger. **Open** (report point `5.6-accord`). Path: **decided**, the gateway uses `/employeurs/{numeroCesu}/…` as the Swagger does. Encoding of `accord`: configurable, [ADR 0008](adr/0008-accord-encoding.md).
 7. 512 is declared by the Swagger on every operation except `/mandats` (030, 031); the PDF lists 401/403/512 for all.
-   429 is absent from the Swagger. Technical error code is `ERR_TECHNIQUE` everywhere but `ERREUR_TECHNIQUE` on 030/031.
+   429 is absent from the Swagger. Technical error code is `ERR_TECHNIQUE` everywhere but `ERREUR_TECHNIQUE` on 030/031. **Decided:** 512 is an authentication failure on the API, 429 and every listed 5xx body are parsed leniently, both technical spellings are accepted ([ADR 0002](adr/0002-http-client-adaptations.md)). Unpublished bodies: see 15.
 8. `congesPayes`: the 040 PDF text has a second paragraph saying the flag marks a "gestion spécifique" with `true`
    meaning paid leave **not** included, contradicting the first paragraph and the 050 error text (`true` = 10 % included).
-   The package follows the first paragraph and the 050 error (`true` = included). Also "heureCp" vs `heuresCp` (Swagger).
+   The package follows the first paragraph and the 050 error (`true` = included). Also "heureCp" vs `heuresCp` (Swagger). **Decided:** the first paragraph and the 050 error are followed (`true` = 10 % included).
 9. 020 and 021: all employee parameters are optional in the Swagger, but the PDF documents a `PARAM_INVALIDE` when no Cesu
-   number, NIR or identification data is present, while its 020 example is employer-only. Is an employer-only call valid?
-10. `InputActivationAici.nomUsage` is required; behaviour when the employer has no usage name is not published.
+   number, NIR or identification data is present, while its 020 example is employer-only. Is an employer-only call valid? **Open** (report point `5.9-020-employer-only`). The batch status sync uses the employer-only form of 020 (workflow.md), which this point confirms or refutes.
+10. `InputActivationAici.nomUsage` is required; behaviour when the employer has no usage name is not published. **Decided:** an employer without usage name passes the birth name (assumption 36). What the API does with it is open (report point `070-aici`).
 11. Swagger `OutputActivationAici.activationAici` description is copied from Cesu+ ("Accord du SP…"); the PDF title is
-    clear.
-12. PDF `codeConseulDepartemental` (typo for `codeConseilDepartemental`); list has no `975` and uses `02A`/`02B`.
+    clear. **Decided:** no effect on the package.
+12. PDF `codeConseulDepartemental` (typo for `codeConseilDepartemental`); list has no `975` and uses `02A`/`02B`. **Decided:** no effect on the package: the codes of §3.11 are used as published.
 13. PDF example typos: leading space in `" Z0003752390009"` (021), spaces inside key names and trailing comma in the 020 example,
     unquoted keys in the 060 / 070 examples, truncated `NATURE_INCORRECTE_AF` description, `"XXXXXX"` and `XX,XX` placeholders,
     unbalanced quotes in the 020 `ERR_METIER` message. The 050 and 070 requests have no usable official example
     (placeholder template / none) and 050 has no response example: those fixtures are labelled *placeholder* /
-    *assembled*.
+    *assembled*. **Decided:** fixtures are labelled *placeholder* / *assembled*.
 
 Behaviour and environment not published:
 
 14. Sandbox: token host (the sb contract still lists `https://api.urssaf.fr/api/oauth/v1/token`), availability of test
-    employers / employees, test data, quotas, and whether the sandbox applies the same business controls.
-15. Request headers (correlation id) and `Retry-After` on 429; response body of 429 and of 401 / 403 / 512.
-16. Whether 010 creates a mandate or only "habilite" the platform (Swagger wording), and whether 030 is still required.
-17. Behaviour of re-posting 030 for the same platform, cancelling a non-existent mandate (031), and mandate expiry.
+    employers / employees, test data, quotas, and whether the sandbox applies the same business controls. **Open** (report point `5.14-token-host`).
+15. Request headers (correlation id) and `Retry-After` on 429; response body of 429 and of 401 / 403 / 512. **Open** (report point `5.15-headers`, `5.15-429`). No header is sent by default; request-id and application-id headers are opt-in ([ADR 0002](adr/0002-http-client-adaptations.md)).
+16. Whether 010 creates a mandate or only "habilite" the platform (Swagger wording), and whether 030 is still required. **Open** (report point `5.16-010-mandate`). 030 stays required before 050 / 060 meanwhile ([ADR 0009](adr/0009-guards-and-opt-outs.md)).
+17. Behaviour of re-posting 030 for the same platform, cancelling a non-existent mandate (031), and mandate expiry. **Open** (report point `5.17-030-repost`, `5.17-031-cancel-absent`). 030 and 031 are retried as idempotent meanwhile ([ADR 0003](adr/0003-retry-and-unknown-outcome.md)).
 18. Whether `inscrit: false` (200) or an error is returned for an unknown person on 020 / 021; whether `numeroCesu` is returned
-    when `inscrit` is false.
-19. 400 payload shape: single object only documented; list form (as on other URSSAF APIs) unconfirmed.
-20. `ERR_METIER` has no stable sub-code: classification relies on `description` texts (placeholders `XX,XX`, `XXX`, `X SMIC`).
+    when `inscrit` is false. **Open** (report point `5.18-020-unknown`, `5.18-021-unknown`).
+19. 400 payload shape: single object only documented; list form (as on other URSSAF APIs) unconfirmed. **Open** (report point `5.19-400-shape`). The error parser accepts a single object and a list.
+20. `ERR_METIER` has no stable sub-code: classification relies on `description` texts (placeholders `XX,XX`, `XXX`, `X SMIC`). **Decided:** classification by `description` text, `null` when unknown ([ADR 0005](adr/0005-err-metier-classification.md)); the missing sub-code is a URSSAF limitation. The duplicate declaration text is observed by `050-duplicate`.
 21. AF (`typeEmploi = AF`): schema carries `revenusAf` and `agrementAF`, yet declarations for family foster carers through
-    the API are refused; 040 simulation for AF is documented. Real support status to confirm.
-22. Which natures (`natureActivite`) are compatible with Cesu+ and AICI (only `NATURE_INCORRECTE` is documented).
+    the API are refused; 040 simulation for AF is documented. Real support status to confirm. **Decided:** refused locally unless opted in ([ADR 0009](adr/0009-guards-and-opt-outs.md)). The real support status of AF is open, no report point.
+22. Which natures (`natureActivite`) are compatible with Cesu+ and AICI (only `NATURE_INCORRECTE` is documented). **Open**, no report point (the contract suite cannot observe it).
 23. Formats not specified (only examples): employer Cesu number alphanumeric 14 chars (example `Z0003752390009`, employee
     example `00000123456789`), NIR (15 chars), department codes, `idDeclaration` (12 characters, example numeric).
-    Local validation is limited to the published lengths and patterns.
+    Local validation is limited to the published lengths and patterns. **Open** (report point `5.23-employer-cesu-format`, `5.23-employee-cesu-format`). (`idDeclaration`: see 33.) Local validation stays permissive meanwhile (30).
 24. Rounding rules of the estimate and declaration amounts, and the SMIC / overtime thresholds referenced by the
-    `XX,XX` messages.
+    `XX,XX` messages. **Open**, no report point (the contract suite cannot observe it).
 25. Whether the first declaration for a pair can reuse a `numeroCesu` obtained through 021 (the PDF forbids it) — to confirm
-    on the sandbox.
+    on the sandbox. **Open**, no report point (the contract suite cannot observe it). Not checked locally (§4.7).
 
 Assumptions taken by the domain layer (to confirm on the sandbox):
 
 26. Amounts read from responses (PAS, debits, AICI) are modelled as non-negative `Money`; a negative value would fail the
-    response mapping (`UnexpectedUrssafResponse`).
+    response mapping (`UnexpectedUrssafResponse`). Assumption, no report point.
 27. `etatCesuPlus` accepts the PDF spellings (`activé`, `bloqué`, `désactivé`) in precomposed UTF-8 only (no Unicode
-    normalisation, no `intl` dependency), next to the Swagger values.
+    normalisation, no `intl` dependency), next to the Swagger values. Assumption, no report point.
 28. `Coefficient` is limited to 4 decimals: a permissive assumption (no precision is published). Family foster carer
-    declarations are refused by the API anyway (§1.2).
-29. `montantAcompte` (`Deposit`) must be strictly positive: the Swagger minimum is 0.01, the PDF publishes none (see 4).
+    declarations are refused by the API anyway (§1.2). Assumption, no report point.
+29. `montantAcompte` (`Deposit`) must be strictly positive: the Swagger minimum is 0.01, the PDF publishes none (see 4). Assumption, no report point.
 30. Formats kept permissive where only lengths are published (see 23): postal and municipality codes are 5 alphanumeric
     characters, country and department codes at most 3 non-space characters, the NIR 15 non-space characters, IBAN 1 to
-    34 and BIC 1 to 11 alphanumeric characters (no checksum), `idDeclaration` at most 64 characters.
+    34 and BIC 1 to 11 alphanumeric characters (no checksum), `idDeclaration` at most 64 characters. Assumption, no report point (see 23).
 
 Assumptions taken by the wire layer (lot 2, to confirm on the sandbox):
 
 31. Nothing is `required` in the Swagger responses (see 18): `inscrit`, `activationCesu` and `activationAici` are required
     (they are the answer), `mandatPresent` and `etatAICI` read as `false` when absent or null (an unregistered employer
-    may come without them).
+    may come without them). Assumption, to confirm with report point `5.31-020-absent-flags`.
 32. Amounts with more than two decimals in responses are rounded to the cent, not refused: a refusal on a successful 050
-    would turn a declared salary into an unknown outcome. The rounding rules are not published (see 24).
+    would turn a declared salary into an unknown outcome. The rounding rules are not published (see 24). Assumption, to confirm with report point `5.32-estimate-decimals`.
 33. `idDeclaration` is accepted as a JSON integer and converted to its decimal string (the PDF example is numeric and the
-    response has no example).
-34. Cesu numbers read from responses (010, 021) are trimmed (the PDF 021 example has a leading space, see 13).
+    response has no example). Assumption, to confirm with report point `5.33-idDeclaration-type`.
+34. Cesu numbers read from responses (010, 021) are trimmed (the PDF 021 example has a leading space, see 13). Assumption, to confirm with report point `5.34-021-numeroCesu-padding`.
 35. `agrementAF` is sent whenever present, including with an `infosSalarie` that only carries a `numeroCesu` (the PDF only
     lets `typeEmploi` and `congesPayes` accompany it, but `agrementAF` is required for family foster carers). AF
-    declarations are refused by the API anyway (§1.2) and locally unless opted in (ADR 0009).
+    declarations are refused by the API anyway (§1.2) and locally unless opted in (ADR 0009). Assumption, no report point.
 36. 070 requires `nomUsage` (see 10): an employer without usage name passes the birth name, documented on
     `AiciActivationRequest`. The 070 names use a permissive value object (30 characters, no pattern) rather than the 010
-    name pattern, so that no rule is invented.
+    name pattern, so that no rule is invented. Assumption, to confirm with report point `070-aici`.
 
 Assumptions taken by the HTTP gateway (lot 3, to confirm on the sandbox):
 
 37. The sandbox token URL is the sandbox host plus `/api/oauth/v1/token` (`https://api-edi.urssaf.fr/api/oauth/v1/token`),
     although the sb contract still names the production token URL (see 14). `ApiConfiguration` accepts a base URI
-    override for the contract tests.
+    override for the contract tests. Assumption, to confirm with report point `5.14-token-host`.
 38. No correlation header is sent by default (see 15): a request-id header (name chosen by the caller, value generated per
     attempt) and an application-id header (name and fixed value) are opt-in. `Accept: application/json` is always sent,
-    `Content-Type` only when there is a body.
+    `Content-Type` only when there is a body. Assumption, to confirm with report point `5.15-headers`.
 39. A first `401` is answered by one replay with a new token, for the operations that are not safe to retry as well (a `401`
     proves that the call was not processed). `512` is an authentication failure on the API (see 7) and an unavailable
-    service on the token endpoint.
+    service on the token endpoint. Assumption, no report point.
 40. Every `5xx` other than `512` (listed or not) on 010, 050, 060 and 070 is an unknown outcome: the call reached URSSAF and
     may have been processed (ADR 0003). On the other operations an unlisted `5xx` is an unexpected response. An unlisted
-    `1xx`, `3xx` or `4xx` is an unexpected response on every operation.
+    `1xx`, `3xx` or `4xx` is an unexpected response on every operation. Assumption, no report point.
 41. The `accord` parameter of 060 is sent as `true` / `false` by default and as `1` / `0` with
-    `AgreementEncoding::Numeric` (see 6, ADR 0008).
+    `AgreementEncoding::Numeric` (see 6, ADR 0008). Assumption, to confirm with report point `5.6-accord`.
+
+Defaults decided while the URSSAF side stays unpublished:
+
+42. Business time zone: `Europe/Paris` by default and configurable ([ADR 0001](adr/0001-date-only-encoding.md)); the
+    reference time zone of URSSAF for "today" rules is not published. Changing it is a configuration change. No report
+    point.
+
