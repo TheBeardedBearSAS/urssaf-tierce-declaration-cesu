@@ -15,7 +15,14 @@ the first `idDeclaration`), and a resend of 010 hits the e-mail uniqueness check
   call, and 429 on every operation.
 - Never resent automatically: 010, 050, 060, 070. A transport error or a 5xx on them throws `OutcomeUnknown`
   (`UrssafUnavailable::mayHaveReachedUrssaf()` is true). 429 and a local rate-limit refusal are safe to retry because
-  the call provably did not reach the service.
+  the call provably did not reach the service. A 2xx answer that cannot be read (invalid JSON, missing field) on these
+  four operations is an `OutcomeUnknown` too (it may have been processed). (lead-accepted 2026-11-15)
+- "A 5xx" means every 5xx other than 512 (authentication error), listed or not (501, 505...): the call reached URSSAF
+  and may have been processed. On the safe operations an unlisted 5xx stays an `UnexpectedUrssafResponse`. 1xx, 3xx
+  and other 4xx statuses are `UnexpectedUrssafResponse` on every operation (not processed; a wrong base URI fails
+  loudly). A token failure never becomes an `OutcomeUnknown` (the API call was not sent). (lead-accepted 2026-11-15)
+- A local rate-limit refusal on the replay of an unsafe operation is a retryable `RateLimitExceeded`: the first attempt
+  was a 401, nothing was processed. (lead-accepted 2026-11-15)
 - Declarations: an unknown outcome moves the local declaration to `outcome_unknown`; `ReconcileStaleDeclarations`
   moves declarations left `submitting` past `stale_submission_after` to `outcome_unknown` with outcome
   `manual_review`. An operator checks on cesu.urssaf.fr, then records the result (`ResolveDeclarationOutcome`:

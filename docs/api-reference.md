@@ -993,3 +993,20 @@ Assumptions taken by the wire layer (lot 2, to confirm on the sandbox):
 36. 070 requires `nomUsage` (see 10): an employer without usage name passes the birth name, documented on
     `AiciActivationRequest`. The 070 names use a permissive value object (30 characters, no pattern) rather than the 010
     name pattern, so that no rule is invented.
+
+Assumptions taken by the HTTP gateway (lot 3, to confirm on the sandbox):
+
+37. The sandbox token URL is the sandbox host plus `/api/oauth/v1/token` (`https://api-edi.urssaf.fr/api/oauth/v1/token`),
+    although the sb contract still names the production token URL (see 14). `ApiConfiguration` accepts a base URI
+    override for the contract tests.
+38. No correlation header is sent by default (see 15): a request-id header (name chosen by the caller, value generated per
+    attempt) and an application-id header (name and fixed value) are opt-in. `Accept: application/json` is always sent,
+    `Content-Type` only when there is a body.
+39. A first `401` is answered by one replay with a new token, for the operations that are not safe to retry as well (a `401`
+    proves that the call was not processed). `512` is an authentication failure on the API (see 7) and an unavailable
+    service on the token endpoint.
+40. Every `5xx` other than `512` (listed or not) on 010, 050, 060 and 070 is an unknown outcome: the call reached URSSAF and
+    may have been processed (ADR 0003). On the other operations an unlisted `5xx` is an unexpected response. An unlisted
+    `1xx`, `3xx` or `4xx` is an unexpected response on every operation.
+41. The `accord` parameter of 060 is sent as `true` / `false` by default and as `1` / `0` with
+    `AgreementEncoding::Numeric` (see 6, ADR 0008).
