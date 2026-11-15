@@ -16,8 +16,12 @@ stateDiagram-v2
     registered --> mandate_notified: RegisterMandate (030)
     mandate_cancelled --> mandate_notified: RegisterMandate (030)
     mandate_notified --> mandate_confirmed: 020 mandatPresent
+    mandate_cancelled --> mandate_confirmed: 020 mandatPresent
     registered --> mandate_confirmed: 020 mandatPresent
+    mandate_notified --> aici_active: 020 etatAICI
+    mandate_cancelled --> aici_active: 020 etatAICI
     mandate_confirmed --> aici_active: 020 etatAICI
+    aici_active --> mandate_confirmed: 020 mandatPresent without etatAICI
     registered --> aici_active: 020 etatAICI
     mandate_confirmed --> registered: 020 without mandate
     aici_active --> registered: 020 without mandate

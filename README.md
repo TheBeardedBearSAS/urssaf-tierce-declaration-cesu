@@ -46,6 +46,8 @@ OAuth2 client credentials, scope `tiersdecl.cesu`, base URL `https://api.urssaf.
 - [docs/roadmap.md](docs/roadmap.md) — planned architecture and order of work.
 - [docs/workflow.md](docs/workflow.md) — employer, mandate and declaration lifecycles, idempotency, retries, monitoring.
 - [docs/integration-events.md](docs/integration-events.md) — public integration events (`urssaf.cesu.*`) and the outbox.
+- [docs/standalone.md](docs/standalone.md) — wiring without the Symfony bundle: builder options, scheduling, manual wiring.
+- [docs/testing.md](docs/testing.md) — testing a host application with the in-memory simulated gateway.
 - [docs/openapi/](docs/openapi/) — official OpenAPI contract(s) from the URSSAF API portal.
 - `docs/reference/` — official URSSAF documentation: not versioned (URSSAF documents), download it from the links in [docs/api-reference.md](docs/api-reference.md) into this local, git-ignored folder.
 - Catalogue page: https://portailapi.urssaf.fr/fr/catalogue-api/prd/td-cesu
@@ -86,6 +88,49 @@ Layers are enforced by Deptrac (`deptrac.yaml`):
   repositories).
 
 Decisions: [docs/adr/](docs/adr/).
+
+## Quick start A: framework-agnostic
+
+```php
+use Nyholm\Psr7\Factory\Psr17Factory;
+use TheBeardedBear\UrssafTierceDeclarationCesu\Application\Command\DeclareSalary;
+use TheBeardedBear\UrssafTierceDeclarationCesu\Application\Command\RegisterEmployer;
+use TheBeardedBear\UrssafTierceDeclarationCesu\Application\Command\RegisterMandate;
+use TheBeardedBear\UrssafTierceDeclarationCesu\Application\Dto\EmployerSelector;
+use TheBeardedBear\UrssafTierceDeclarationCesu\Application\Port\Credentials;
+use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Shared\ExternalReference;
+use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Shared\TenantId;
+use TheBeardedBear\UrssafTierceDeclarationCesu\Infrastructure\Credentials\InMemoryCredentialsProvider;
+use TheBeardedBear\UrssafTierceDeclarationCesu\Infrastructure\Urssaf\ApiConfiguration;
+use TheBeardedBear\UrssafTierceDeclarationCesu\Infrastructure\Urssaf\Environment;
+use TheBeardedBear\UrssafTierceDeclarationCesu\Infrastructure\Urssaf\HttpTransport;
+use TheBeardedBear\UrssafTierceDeclarationCesu\Standalone\UrssafTierceDeclarationCesuBuilder;
+
+$factory = new Psr17Factory();
+$urssaf = UrssafTierceDeclarationCesuBuilder::create(
+    new HttpTransport($psr18Client, $factory, $factory),   // any PSR-18 client and PSR-17 factories
+    new InMemoryCredentialsProvider(['tenant-1' => Credentials::of(getenv('URSSAF_CLIENT_ID'), getenv('URSSAF_CLIENT_SECRET'))]),
+    ApiConfiguration::forEnvironment(Environment::Sandbox),
+)
+    ->withRepositories($accounts, $mandates, $declarations, $transactions, $statistics) // default: in-memory (tests, prototypes)
+    ->withTokenStore($sharedTokenStore)                                                 // default: in-memory (a token per process)
+    ->build();
+
+$tenant = TenantId::fromString('tenant-1');
+$employer = EmployerSelector::byExternalReference(ExternalReference::fromString('employer-42'));
+// 1. Enrol the employer (method 010, synchronous; bank details are never stored). $draft is a Domain\Employer\Input\NewEmployerDraft.
+$urssaf->registerEmployer()(new RegisterEmployer($tenant, ExternalReference::fromString('employer-42'), $draft));
+// 2. Notify the third-party declaration mandate (method 030), required before any declaration (ADR 0009).
+$urssaf->registerMandate()(new RegisterMandate($tenant, $employer));
+// 3. Declare a salary (method 050, idempotent per external reference). $declaration is a Domain\Declaration\Input\DeclarationDraft.
+$submission = $urssaf->declareSalary()(new DeclareSalary($tenant, ExternalReference::fromString('payslip-2026-10'), $declaration));
+// $submission->outcome: declared, rejected, already_declared, outcome_unknown (never resent: resolveDeclarationOutcome())...
+```
+
+The other use cases are one accessor away: `verifyEmployer()`, `verifyEmployee()`, `syncEmployerStatus()`,
+`estimateContributions()`, `activateCesuPlus()`, `activateAici()`, `getEmployerAccount()`, `findDeclarations()`... Every
+option of the builder and the manual wiring are described in [docs/standalone.md](docs/standalone.md); test your
+integration with the simulator ([docs/testing.md](docs/testing.md)).
 
 ## Requirements
 

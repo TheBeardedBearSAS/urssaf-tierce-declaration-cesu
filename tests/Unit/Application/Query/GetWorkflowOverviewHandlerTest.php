@@ -65,6 +65,22 @@ final class GetWorkflowOverviewHandlerTest extends TestCase
         static::assertSame([], (new GetWorkflowOverviewHandler(new FixedWorkflowStatistics([], [], [])))(GetWorkflowOverview::allTenants()));
     }
 
+    public function testANumericTenantIdIsKeptAsAString(): void
+    {
+        $overviews = (new GetWorkflowOverviewHandler(new FixedWorkflowStatistics(
+            [self::stateCount('123', 'registered', 1)],
+            [self::stateCount('45', 'notified', 2)],
+            [self::stateCount('tenant-a', 'declared', 3)],
+        )))(GetWorkflowOverview::allTenants());
+
+        static::assertSame(
+            ['123', '45', 'tenant-a'],
+            array_map(static fn(TenantOverview $overview): string => $overview->tenantId, $overviews),
+        );
+        static::assertSame(array_replace(self::NO_EMPLOYER, ['registered' => 1]), $overviews[0]->employers);
+        static::assertSame(array_replace(self::NO_MANDATE, ['notified' => 2]), $overviews[1]->mandates);
+    }
+
     public function testTheDeclarationsWaitingForAManualActionAreSummed(): void
     {
         $overviews = (new GetWorkflowOverviewHandler(new FixedWorkflowStatistics(

@@ -17,7 +17,7 @@ match the API version (the portal showed 2.0.0 at that date), which is why Swagg
 Field names, codes and wire values below are reproduced verbatim from the specification (they are French by design,
 some without accents in the Swagger); everything else in the package is English.
 
-> Status: specification only. Nothing below is implemented yet; see [roadmap.md](roadmap.md).
+> Status: implemented progressively, see [roadmap.md](roadmap.md).
 
 Local lifecycles, idempotency and retries: [workflow.md](workflow.md). Public integration events: [integration-events.md](integration-events.md).
 

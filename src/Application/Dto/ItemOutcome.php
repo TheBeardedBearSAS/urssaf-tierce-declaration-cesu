@@ -39,7 +39,7 @@ enum ItemOutcome: string
     /** The URSSAF status of an employer changed (method 020). */
     case Changed = 'changed';
 
-    /** The URSSAF status of an employer was confirmed (method 020). */
+    /** Method 020 answered with no change for the employer. */
     case Unchanged = 'unchanged';
 
     /** URSSAF refused the query for this record (codes attached): left untouched. */
