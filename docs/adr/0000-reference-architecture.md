@@ -62,6 +62,7 @@ Consequences).
 - Personal and banking data storage — ADR 0007.
 - `accord` encoding configurable — ADR 0008.
 - Mandate guard and AF fail-fast opt-outs — ADR 0009.
+- Wire mappers are split per direction (`…RequestMapper` / `…ResponseMapper`) instead of one class per operation (lot 2).
 
 ## Not applicable
 - Batching by 10 (050/070 of Tiers de prestations): every CESU call is unitary.
