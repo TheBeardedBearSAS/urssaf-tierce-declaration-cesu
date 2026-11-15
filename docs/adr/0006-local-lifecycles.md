@@ -29,6 +29,12 @@ reconciliation.
   (checked by a fingerprint that excludes personal data); there is no asynchronous declaration submission.
   Idempotency: same tenant + external reference + same content returns the existing record; a different content
   throws `DeclarationAlreadyRecorded`.
+- Amendment (2026-11-15, lead-accepted): a `rejected` record (URSSAF answered 400 and recorded nothing) is superseded by
+  the next `DeclareSalary` with the same external reference, whatever its content: the rejected record is deleted and a
+  new one (new id) is recorded in the same transaction. Every other state follows the re-entry table of
+  docs/workflow.md (same content: replayed or resumed; different content: `DeclarationAlreadyRecorded`). An `error`
+  record that exhausted `max_submission_attempts` has no domain exit: `DeclareSalary` reports it as `exhausted` without
+  calling URSSAF until the policy maximum is raised.
 - `SyncEmployerStatus` (020) refreshes employer and mandate state; it is the only polling.
 
 ## Consequences

@@ -44,6 +44,8 @@ OAuth2 client credentials, scope `tiersdecl.cesu`, base URL `https://api.urssaf.
 
 - [docs/api-reference.md](docs/api-reference.md) — technical reference (single source of truth for the package).
 - [docs/roadmap.md](docs/roadmap.md) — planned architecture and order of work.
+- [docs/workflow.md](docs/workflow.md) — employer, mandate and declaration lifecycles, idempotency, retries, monitoring.
+- [docs/integration-events.md](docs/integration-events.md) — public integration events (`urssaf.cesu.*`) and the outbox.
 - [docs/openapi/](docs/openapi/) — official OpenAPI contract(s) from the URSSAF API portal.
 - `docs/reference/` — official URSSAF documentation: not versioned (URSSAF documents), download it from the links in [docs/api-reference.md](docs/api-reference.md) into this local, git-ignored folder.
 - Catalogue page: https://portailapi.urssaf.fr/fr/catalogue-api/prd/td-cesu
