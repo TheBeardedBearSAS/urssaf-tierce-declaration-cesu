@@ -18,6 +18,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - CodeQL analysis of the GitHub Actions workflows (workflow `codeql.yml`) on every pull request and push to `main`.
 - Architecture decision records (`docs/adr/`): the architecture inherited from `thebeardedbear/urssaf-tiers-prestations`
   (ADR 0000) and the CESU-specific decisions (ADR 0001 to 0012).
+- Domain layer (`src/Domain`): shared value objects (tenant, external reference, calendar date, instant, money in cents,
+  half-days, e-mail, phone, country code, Cesu number), exception hierarchy and validation notification pattern;
+  employer registration input, address and bank details, 020 status snapshot; employee identification sum type (Cesu
+  number, NIR, administrative data); declaration sum type (standard, Cesu+), incomes, supplements, paid leave, foster
+  carer approval, result; contribution estimate; local lifecycles of employers, mandates and declarations (ADR 0006);
+  drafts and factories reporting every violation; local pre-checks of ADR 0009.
 
 ### Changed
 

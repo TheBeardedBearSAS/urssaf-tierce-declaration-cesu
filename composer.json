@@ -24,7 +24,8 @@
         "security": "https://github.com/TheBeardedBearSAS/urssaf-tierce-declaration-cesu/security/policy"
     },
     "require": {
-        "php": ">=8.2"
+        "php": ">=8.2",
+        "ext-mbstring": "*"
     },
     "require-dev": {
         "carthage-software/mago": "^1.59",
