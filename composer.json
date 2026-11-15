@@ -1,8 +1,28 @@
 {
     "name": "thebeardedbear/urssaf-tierce-declaration-cesu",
     "description": "Client and domain model for the URSSAF \"API Tierce Déclaration CESU\" (third-party declaration for private employers, Cesu+ and immediate tax credit advance)",
-    "license": "proprietary",
+    "license": "MIT",
     "type": "symfony-bundle",
+    "keywords": [
+        "urssaf",
+        "api",
+        "tierce-declaration",
+        "cesu",
+        "emploi-a-domicile",
+        "symfony-bundle"
+    ],
+    "authors": [
+        {
+            "name": "TheBeardedBear",
+            "homepage": "https://github.com/TheBeardedBearSAS"
+        }
+    ],
+    "homepage": "https://github.com/TheBeardedBearSAS/urssaf-tierce-declaration-cesu",
+    "support": {
+        "issues": "https://github.com/TheBeardedBearSAS/urssaf-tierce-declaration-cesu/issues",
+        "source": "https://github.com/TheBeardedBearSAS/urssaf-tierce-declaration-cesu",
+        "security": "https://github.com/TheBeardedBearSAS/urssaf-tierce-declaration-cesu/security/policy"
+    },
     "require": {
         "php": ">=8.2"
     },
