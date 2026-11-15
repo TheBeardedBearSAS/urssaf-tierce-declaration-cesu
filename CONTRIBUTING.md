@@ -34,6 +34,7 @@ make help          # every target
 
 The live sandbox contract tests (`make test-contract`) are opt-in and need your own URSSAF sandbox credentials
 (see the README). They are skipped when the credentials are missing.
+Tests that write sandbox state also need `URSSAF_SANDBOX_ALLOW_WRITES=1`.
 
 ## Quality gate
 

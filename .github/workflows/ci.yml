@@ -8,7 +8,11 @@ on:
   workflow_dispatch:
     inputs:
       contract:
-        description: Run the contract tests against the URSSAF sandbox (needs repository secrets)
+        description: Run the contract tests against the URSSAF sandbox (needs the urssaf-sandbox environment)
+        type: boolean
+        default: false
+      contract_writes:
+        description: Also run the contract tests that write real sandbox state (010, 030, 031, 050, 060, 070)
         type: boolean
         default: false
 
@@ -243,8 +247,11 @@ jobs:
             tools/phpbench/vendor/bin/phpbench run --report=urssaf --store --tag=current
           fi
 
-  # Manual only: Actions > CI > Run workflow > "contract". Repository secrets URSSAF_SANDBOX_CLIENT_ID and
-  # URSSAF_SANDBOX_CLIENT_SECRET are required; URSSAF_SANDBOX_BASE_URI is an optional repository variable.
+  # Manual only: Actions > CI > Run workflow > "contract" (and optionally "contract_writes"). Environment urssaf-sandbox:
+  # secrets URSSAF_SANDBOX_CLIENT_ID / URSSAF_SANDBOX_CLIENT_SECRET, optional variables for the others. The sandbox test
+  # numbers are variables (not secrets) because they are fictitious sandbox data; if URSSAF provides real-looking data,
+  # store them as secrets with the same names and switch the three lines below from `vars.` to `secrets.`.
+  # Writes are a per-run choice (second input), never a persisted variable, so a routine read-only run cannot write.
   contract:
     name: contract (URSSAF sandbox)
     if: github.event_name == 'workflow_dispatch' && inputs.contract
@@ -261,3 +268,15 @@ jobs:
           URSSAF_SANDBOX_CLIENT_ID: ${{ secrets.URSSAF_SANDBOX_CLIENT_ID }}
           URSSAF_SANDBOX_CLIENT_SECRET: ${{ secrets.URSSAF_SANDBOX_CLIENT_SECRET }}
           URSSAF_SANDBOX_BASE_URI: ${{ vars.URSSAF_SANDBOX_BASE_URI }}
+          URSSAF_SANDBOX_TOKEN_URI: ${{ vars.URSSAF_SANDBOX_TOKEN_URI }}
+          URSSAF_SANDBOX_EMPLOYER_CESU_NUMBER: ${{ vars.URSSAF_SANDBOX_EMPLOYER_CESU_NUMBER }}
+          URSSAF_SANDBOX_EMPLOYER_BIRTH_DATE: ${{ vars.URSSAF_SANDBOX_EMPLOYER_BIRTH_DATE }}
+          URSSAF_SANDBOX_EMPLOYEE_CESU_NUMBER: ${{ vars.URSSAF_SANDBOX_EMPLOYEE_CESU_NUMBER }}
+          URSSAF_SANDBOX_ALLOW_WRITES: ${{ inputs.contract_writes && '1' || '' }}
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: contract-report
+          path: var/contract/
+          if-no-files-found: ignore
+          retention-days: 7

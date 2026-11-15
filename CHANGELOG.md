@@ -9,6 +9,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- Sandbox contract tests (tests/Contract, `make test-contract`, manual CI job `contract`): read-only checks of the token
+  endpoint, 020, 021 and 040 (official example), and opt-in writes (URSSAF_SANDBOX_ALLOW_WRITES=1 / `contract_writes`
+  input) for 010, 030/031, 050, 060 and 070; recording PSR-18 client and a redacted observation report
+  (var/contract/sandbox-report.json) for the open points of api-reference §5; optional URSSAF_SANDBOX_TOKEN_URI.
 - Project skeleton: Docker tooling, quality gates (`make ci`) and GitHub Actions CI, identical to the other URSSAF
   packages.
 - Specification: official OpenAPI contracts (`docs/openapi/`), official documentation (links in `docs/api-reference.md`, local copy in the git-ignored `docs/reference/`), technical

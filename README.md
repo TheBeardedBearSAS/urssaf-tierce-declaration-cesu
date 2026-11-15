@@ -232,20 +232,36 @@ OpenSSF Scorecard. The benchmarks (`tests/Benchmark`, PHPBench in `tools/phpbenc
 run on every pull request against the base commit, and the job fails on a regression of more than 20 %.
 ## Sandbox contract tests
 
-`make test-contract` runs the `contract` suite against the URSSAF sandbox. It is opt-in and skipped when the
-credentials are missing. Variables (environment of the shell running `make`, or GitHub secrets / variables of the
-`urssaf-sandbox` environment for the manual `contract` CI job):
+`make test-contract` runs the `contract` suite against the URSSAF sandbox. It is opt-in: without credentials every test is
+skipped and the command exits 0. The suite is never part of the default run, of the coverage or of the mutation testing.
+Variables (environment of the shell running `make`, or secrets / variables of the `urssaf-sandbox` environment for the
+manual `contract` CI job):
 
 | Variable | Required | Meaning |
 |---|---|---|
 | `URSSAF_SANDBOX_CLIENT_ID` | yes | OAuth2 client id of your sandbox subscription (secret) |
 | `URSSAF_SANDBOX_CLIENT_SECRET` | yes | OAuth2 client secret (secret) |
-| `URSSAF_SANDBOX_BASE_URI` | no | sandbox host override (default `https://api-edi.urssaf.fr`) |
+| `URSSAF_SANDBOX_BASE_URI` | no | sandbox host override (default `https://api-edi.urssaf.fr`); the production host is refused |
+| `URSSAF_SANDBOX_TOKEN_URI` | no | full token URL used instead of `<base>/api/oauth/v1/token` (open point 5.14 of the API reference) |
 | `URSSAF_SANDBOX_EMPLOYER_CESU_NUMBER` | no | a sandbox employer Cesu number (enables the employer tests) |
-| `URSSAF_SANDBOX_EMPLOYER_BIRTH_DATE` | no | its birth date, `YYYY-MM-DD` |
-| `URSSAF_SANDBOX_EMPLOYEE_CESU_NUMBER` | no | a sandbox employee Cesu number (enables the employee tests) |
+| `URSSAF_SANDBOX_EMPLOYER_BIRTH_DATE` | with the above | its birth date, `YYYY-MM-DD` |
+| `URSSAF_SANDBOX_EMPLOYEE_CESU_NUMBER` | no | a sandbox employee Cesu number (enables the pair and employee tests) |
+| `URSSAF_SANDBOX_ALLOW_WRITES` | no | exactly `1` to also run the tests that write sandbox state |
 
-Never commit these values.
+Read-only by default: token, 020, 021 and 040 (official example, nothing is stored). `URSSAF_SANDBOX_ALLOW_WRITES=1`
+also runs 010 (a fictitious employer), 030/031 (the mandate of your test employer, restored afterwards), 050 (one
+declaration of the previous month plus its duplicate), 060 (activates Cesu+ for your test pair) and 070 (on the
+fictitious employer). These create sandbox state that cannot be undone.
+
+Report: `var/contract/sandbox-report.json` (git-ignored) lists what the sandbox answered for each open point of
+[docs/api-reference.md](docs/api-reference.md) section 5: enum values, key names, JSON types and HTTP statuses only,
+no personal data, no token. The CI job uploads it as the `contract-report` artifact.
+
+CI: Actions > CI > Run workflow, tick `contract` (and `contract_writes`); environment `urssaf-sandbox`.
+
+Never commit these values. Do not set `failOnSkipped` / `failOnIncomplete` in `phpunit.xml.dist`: the suite must pass
+when skipped. The 050 test targets the previous calendar month: the `idDeclaration` type is observable once per
+employer / employee pair and month, later runs see the duplicate refusal.
 
 ## Versioning
 
