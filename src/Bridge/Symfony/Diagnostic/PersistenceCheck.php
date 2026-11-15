@@ -9,16 +9,15 @@ use Override;
 /**
  * Tells which persistence the records live in: the "in_memory" driver loses them when the process ends.
  *
- * Lot 7 (Doctrine bridge) adds the "doctrine" arm and the schema check.
- *
- * Source: lot 6 design §6.1 (new check), ADR 0013.
+ * Source: lot 6 design §6.1 (new check), lot 7 design §8.3, ADR 0013. The tables of the "doctrine" driver are checked by
+ * {@see DatabaseSchemaCheck}.
  */
 final readonly class PersistenceCheck implements InstallationCheck
 {
     private const NAME = 'persistence';
 
     /**
-     * @param string $driver the "persistence.driver" option ("in_memory" or "custom": "doctrine" is refused at build time)
+     * @param string $driver the "persistence.driver" option ("in_memory", "doctrine" or "custom")
      */
     public function __construct(private string $driver) {}
 
@@ -27,6 +26,10 @@ final readonly class PersistenceCheck implements InstallationCheck
     {
         if ($this->driver === 'in_memory') {
             return [new CheckResult(self::NAME, '', CheckStatus::Warning, 'In-memory persistence: every record is lost when the process ends (tests and prototypes only).')];
+        }
+
+        if ($this->driver === 'doctrine') {
+            return [new CheckResult(self::NAME, '', CheckStatus::Ok, 'Doctrine repositories (see the "database schema" check).')];
         }
 
         return [new CheckResult(self::NAME, '', CheckStatus::Ok, 'Repositories of the application ("custom" driver).')];

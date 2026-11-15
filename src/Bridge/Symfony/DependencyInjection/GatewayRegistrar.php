@@ -137,11 +137,13 @@ final readonly class GatewayRegistrar
     }
 
     /**
+     * An empty name is "not configured", like null (ConfigurationRules::incompleteApplicationIdHeader()).
+     *
      * @param array{name: ?string, value: ?string} $header
      */
     private function applicationIdHeader(array $header): ?Definition
     {
-        if ($header['name'] === null) {
+        if ($header['name'] === null || $header['name'] === '') {
             return null;
         }
 

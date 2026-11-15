@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace TheBeardedBear\UrssafTierceDeclarationCesu\Bridge\Symfony\DependencyInjection;
 
+use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Config\Definition\Builder\ArrayNodeDefinition;
 use Symfony\Component\Config\Definition\Builder\ScalarNodeDefinition;
 use Symfony\Component\Config\Definition\Configurator\DefinitionConfigurator;
@@ -13,14 +14,32 @@ use TheBeardedBear\UrssafTierceDeclarationCesu\Infrastructure\RateLimiter\Slidin
 /**
  * Configuration tree of the "urssaf_tierce_declaration_cesu" bundle configuration.
  *
- * Source: reference BundleConfiguration, lot 6 design §2 and §3, ADR 0013. There is no default driver yet (the
- * "doctrine" driver comes with the Doctrine bridge): "in_memory" is the default.
+ * Source: reference BundleConfiguration, lot 6 design §2 and §3, lot 7 design §8.1, ADR 0013 (amended) and ADR 0014. The
+ * default driver is "doctrine" when doctrine/orm is installed, "in_memory" otherwise.
  */
 final class BundleConfiguration
 {
     public const DRIVER_IN_MEMORY = 'in_memory';
     public const DRIVER_DOCTRINE = 'doctrine';
     public const DRIVER_CUSTOM = 'custom';
+
+    /**
+     * The default persistence driver: "doctrine" when doctrine/orm is installed.
+     */
+    public static function defaultDriver(): string
+    {
+        return self::defaultDriverFor(interface_exists(EntityManagerInterface::class));
+    }
+
+    /**
+     * Pure predicate of {@see defaultDriver()}, so that both arms are tested whatever is installed.
+     *
+     * @mago-expect lint:no-boolean-flag-parameter The flag is the fact "doctrine/orm is installed", not a mode of the function.
+     */
+    public static function defaultDriverFor(bool $ormInstalled): string
+    {
+        return $ormInstalled ? self::DRIVER_DOCTRINE : self::DRIVER_IN_MEMORY;
+    }
 
     public static function define(DefinitionConfigurator $definition): void
     {
@@ -237,20 +256,19 @@ final class BundleConfiguration
         $node
             ->addDefaultsIfNotSet()
             ->validate()
-                ->ifTrue(ConfigurationRules::doctrineDriverUnavailable(...))
-                ->thenInvalid('The "doctrine" persistence driver comes with the Doctrine bridge, not available in this version: use "in_memory" or "custom".')
-            ->end()
-            ->validate()
                 ->ifTrue(ConfigurationRules::customDriverWithoutRepositories(...))
                 ->thenInvalid('The "custom" driver requires "employer_account_repository", "mandate_repository" and "declaration_record_repository".')
             ->end()
             ->children()
-                ->enumNode('driver')->values([self::DRIVER_IN_MEMORY, self::DRIVER_DOCTRINE, self::DRIVER_CUSTOM])->defaultValue(self::DRIVER_IN_MEMORY)->info('"in_memory" is for tests and prototypes; "doctrine" comes with the Doctrine bridge.')->end()
+                ->enumNode('driver')->values([self::DRIVER_IN_MEMORY, self::DRIVER_DOCTRINE, self::DRIVER_CUSTOM])->defaultValue(self::defaultDriver())->info('"doctrine" when doctrine/orm is installed, else "in_memory" (tests and prototypes).')->end()
                 ->scalarNode('employer_account_repository')->defaultNull()->info('Service id of your EmployerAccountRepository (driver "custom").')->end()
                 ->scalarNode('mandate_repository')->defaultNull()->info('Service id of your MandateRepository (driver "custom").')->end()
                 ->scalarNode('declaration_record_repository')->defaultNull()->info('Service id of your DeclarationRecordRepository (driver "custom").')->end()
                 ->scalarNode('transaction_manager')->defaultNull()->info('Service id of your TransactionManager shared with the repositories (driver "custom"; default: ImmediateTransactionManager).')->end()
                 ->scalarNode('workflow_statistics')->defaultNull()->info('Service id of your WorkflowStatistics (driver "custom", optional: without it, GetWorkflowOverviewHandler and urssaf:cesu:status are not available).')->end()
+                ->scalarNode('entity_manager')->defaultValue('default')->cannotBeEmpty()
+                    ->info('Name of the Doctrine entity manager (driver "doctrine"). Use a DEDICATED entity manager (own connection) for this package: its repositories flush the whole unit of work of the entity manager they use, which would also write pending changes of the host entities sharing it.')
+                ->end()
             ->end();
 
         return $node;

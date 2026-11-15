@@ -146,16 +146,12 @@ final class ConfigurationRules
     }
 
     /**
-     * The "doctrine" driver comes with the Doctrine bridge (removed with it).
-     *
-     * @param array<array-key, mixed> $value
+     * The "doctrine" driver needs DoctrineBundle (its entity manager services), checked by the bundle while the
+     * container is prepared (the per-extension container used when loading cannot tell whether a bundle is registered).
      */
-    public static function doctrineDriverUnavailable(array $value): bool
+    public static function doctrineDriverWithoutBundle(string $driver, bool $bundleRegistered): bool
     {
-        /** @var array{driver: string} $persistence */
-        $persistence = $value;
-
-        return $persistence['driver'] === BundleConfiguration::DRIVER_DOCTRINE;
+        return $driver === BundleConfiguration::DRIVER_DOCTRINE && !$bundleRegistered;
     }
 
     /**

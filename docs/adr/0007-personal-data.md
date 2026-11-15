@@ -23,3 +23,13 @@ stored". The reference documents encryption at rest as a recipe (DBAL type overr
 
 - A declaration cannot be re-sent from storage alone (consistent with ADR 0003).
 - Hosts keep their own copy of payroll data if they need it.
+
+## Amendment (2026-11-15, lead-accepted, lot 7)
+
+- The Doctrine bridge ([ADR 0014](0014-doctrine-bridge.md)) has no column for IBAN, BIC, NIR, employee names, birth
+  data, address, e-mail or phone (asserted by a test).
+- The amounts of the declaration result (gross and net taxable salary of the employee, contributions, debits) are kept
+  in the declaration record, as are the URSSAF error descriptions (they may echo host values). They are personal data:
+  retention is the host's policy, and the encryption recipe in `docs/doctrine.md` covers them.
+- The employer birth date has its own DBAL type (`urssaf_cesu_birth_date`) so that it can be encrypted alone.
+- Conversion errors on these columns never contain the stored value.

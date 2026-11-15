@@ -33,7 +33,18 @@ final class TranslationsTest extends TestCase
     /** Locales shipped by the bundle. */
     private const LOCALES = ['en', 'fr'];
 
-    /** Directories scanned for codes, relative to the package root (lot 7 adds src/Bridge/Doctrine). */
+    /**
+     * Doctrine repositories, scanned file by file: they hold the "<aggregate>.concurrent_modification" codes (lot 7). Not
+     * the whole directory: DoctrineWorkflowStatistics holds DQL field literals ("tracking.stage", "status.state") that
+     * the literal scan would take for codes; the duplicate codes of the repositories are the in-memory ones.
+     */
+    private const SCANNED_FILES = [
+        'src/Bridge/Doctrine/Repository/DoctrineDeclarationRecordRepository.php',
+        'src/Bridge/Doctrine/Repository/DoctrineEmployerAccountRepository.php',
+        'src/Bridge/Doctrine/Repository/DoctrineMandateRepository.php',
+    ];
+
+    /** Directories scanned for codes, relative to the package root. */
     private const SCANNED = [
         'src/Domain',
         'src/Application',
@@ -233,6 +244,9 @@ final class TranslationsTest extends TestCase
                     $sources[substr($file->getPathname(), \strlen(self::root()) + 1)] = (string) file_get_contents($file->getPathname());
                 }
             }
+        }
+        foreach (self::SCANNED_FILES as $file) {
+            $sources[$file] = (string) file_get_contents(self::root() . '/' . $file);
         }
         ksort($sources);
 

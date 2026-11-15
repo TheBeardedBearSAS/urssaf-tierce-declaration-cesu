@@ -125,11 +125,12 @@ final class ConfigurationRulesTest extends TestCase
         static::assertFalse(ConfigurationRules::defaultPageAboveMax(['default_page_size' => 1, 'max_page_size' => 1]));
     }
 
-    public function testTheDoctrineDriverIsUnavailable(): void
+    public function testTheDoctrineDriverNeedsDoctrineBundle(): void
     {
-        static::assertTrue(ConfigurationRules::doctrineDriverUnavailable(['driver' => 'doctrine']));
-        static::assertFalse(ConfigurationRules::doctrineDriverUnavailable(['driver' => 'in_memory']));
-        static::assertFalse(ConfigurationRules::doctrineDriverUnavailable(['driver' => 'custom']));
+        static::assertTrue(ConfigurationRules::doctrineDriverWithoutBundle('doctrine', false));
+        static::assertFalse(ConfigurationRules::doctrineDriverWithoutBundle('doctrine', true));
+        static::assertFalse(ConfigurationRules::doctrineDriverWithoutBundle('in_memory', false));
+        static::assertFalse(ConfigurationRules::doctrineDriverWithoutBundle('custom', false));
     }
 
     #[DataProvider('customDrivers')]

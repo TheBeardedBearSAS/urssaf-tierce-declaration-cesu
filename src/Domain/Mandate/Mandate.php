@@ -39,6 +39,13 @@ class Mandate
     /** @var list<DomainEvent> */
     private array $events = [];
 
+    /**
+     * Persistence concurrency token (optimistic lock of the Doctrine bridge, lot 7 decision 1): read and written by the ORM
+     * through reflection, never by the domain. It is not a domain concept and has no accessor.
+     */
+    // @mago-expect analysis:unused-property Doctrine optimistic-lock token, read and written by the ORM through reflection.
+    private int $version = 1;
+
     private function __construct(
         protected MandateId $id,
         private readonly TenantId $tenantId,

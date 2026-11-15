@@ -13,6 +13,7 @@ use TheBeardedBear\UrssafTierceDeclarationCesu\Bridge\Symfony\Command\CheckInsta
 use TheBeardedBear\UrssafTierceDeclarationCesu\Bridge\Symfony\Diagnostic\AuthenticationCheck;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Bridge\Symfony\Diagnostic\ConfigurationCheck;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Bridge\Symfony\Diagnostic\CredentialsCheck;
+use TheBeardedBear\UrssafTierceDeclarationCesu\Bridge\Symfony\Diagnostic\DatabaseSchemaCheck;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Bridge\Symfony\Diagnostic\InstallationCheck;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Bridge\Symfony\Diagnostic\LockCheck;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Bridge\Symfony\Diagnostic\PersistenceCheck;
@@ -28,7 +29,7 @@ use TheBeardedBear\UrssafTierceDeclarationCesu\Bridge\Symfony\UrssafTierceDeclar
  * The configuration and the token provider reach their checks through closures, so that an invalid configuration is
  * reported by the "configuration" check instead of preventing the command from running.
  *
- * Source: reference DiagnosticRegistrar, lot 6 design §6.2, ADR 0013.
+ * Source: reference DiagnosticRegistrar, lot 6 design §6.2, lot 7 design §8.3, ADR 0013, ADR 0014.
  *
  * @phpstan-import-type Config from ServiceRegistrar
  */
@@ -49,6 +50,10 @@ final readonly class DiagnosticRegistrar
         $this->check($gatewayCheck, $gatewayArguments);
         $this->check(TokenStoreCheck::class, [$config['token_store']['service'], $config['token_store']['cache_pool']]);
         $this->check(PersistenceCheck::class, [$config['persistence']['driver']]);
+        if ($config['persistence']['driver'] === BundleConfiguration::DRIVER_DOCTRINE) {
+            $entityManager = $config['persistence']['entity_manager'];
+            $this->check(DatabaseSchemaCheck::class, [new Reference(ServiceIds::entityManager($entityManager)), $entityManager]);
+        }
         $this->check(LockCheck::class, [new Reference(OperationLocks::class)]);
 
         $this->services->set(CheckInstallationCommand::class)

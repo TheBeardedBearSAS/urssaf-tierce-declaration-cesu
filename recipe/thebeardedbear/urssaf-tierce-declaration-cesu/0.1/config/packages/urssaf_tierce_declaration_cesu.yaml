@@ -12,9 +12,10 @@ urssaf_tierce_declaration_cesu:
     #   framework.cache.pools.urssaf_cesu.token_cache: { adapter: cache.adapter.redis, provider: '%env(REDIS_DSN)%' }
     # token_store: { cache_pool: urssaf_cesu.token_cache }
 
-    # Persistence: "in_memory" (default) loses every record at the end of the process: give your repositories
-    # ("custom" driver), see docs/symfony.md.
-    # persistence: { driver: custom, employer_account_repository: …, mandate_repository: …, declaration_record_repository: … }
+    # Persistence: Doctrine by default (when doctrine/orm is installed). Use a DEDICATED entity manager (docs/doctrine.md),
+    # then generate the tables with doctrine:migrations:diff. Without Doctrine, "in_memory" loses every record at the end of
+    # the process: give your repositories ("custom" driver), see docs/symfony.md.
+    # persistence: { driver: doctrine, entity_manager: urssaf_cesu }
 
     # Integration events for your application (docs/integration-events.md).
     # outbox: { enabled: true, sink: messenger }

@@ -172,6 +172,13 @@ final class ServiceDefinitionsTest extends TestCase
         static::assertNull($arguments[3]);
     }
 
+    public function testTheApplicationIdHeaderIsNotSentWithAnEmptyNameAndValue(): void
+    {
+        $arguments = (new TestKernel(['application_id_header' => ['name' => '', 'value' => '']]))->definitions()->getDefinition(ServiceIds::API_CONFIGURATION)->getArguments();
+
+        static::assertNull($arguments[3]);
+    }
+
     public function testTheWorkflowPolicyArgumentsFollowTheConstructor(): void
     {
         $container = (new TestKernel([

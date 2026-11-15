@@ -69,8 +69,14 @@ Consequences).
   separate fake repositories: no duplicated query logic, the shared contract traits prove the inner ones.
   (lead-accepted 2026-11-15)
 - Wire mappers are split per direction (`…RequestMapper` / `…ResponseMapper`) instead of one class per operation (lot 2).
-- Symfony bridge: names, Messenger scope without auto-submit, `in_memory` default driver until the Doctrine bridge, hidden
+- Symfony bridge: names, Messenger scope without auto-submit, `doctrine` default driver (since ADR 0014), hidden
   prompts, exit code 2, extra diagnostics — ADR 0013.
+- Doctrine bridge: no progress table, active-mandate key table, native version field, JSON columns, dedicated birth
+  date type, default driver with fail-fast — ADR 0014.
+
+- PHPStan analyses against PHP 8.2 (`phpVersion: 80200`) and `type_coverage.constant` is disabled: typed class
+  constants need PHP 8.3, so the reference setting (inert on PHP 8.2) failed `make ci PHP_VERSION=8.4`
+  (lead-accepted 2026-11-15).
 
 ## Not applicable
 - Batching by 10 (050/070 of Tiers de prestations): every CESU call is unitary.

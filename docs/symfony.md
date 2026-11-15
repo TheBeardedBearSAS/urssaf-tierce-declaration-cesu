@@ -62,7 +62,8 @@ The configuration tree is defined in `Bridge\Symfony\DependencyInjection\BundleC
 | `workflow.allow_foster_carer_declarations` | bool | `false` | Accepts `typeEmploi = AF` declarations locally (ADR 0009). |
 | `workflow.default_page_size` | int >= 1 | `100` | Records loaded by a batch use case when no limit is given. |
 | `workflow.max_page_size` | int >= 1 | `1000` | Upper bound of the records loaded by a batch use case. |
-| `persistence.driver` | enum `in_memory` \| `doctrine` \| `custom` | `in_memory` | Persistence adapter. `doctrine` is refused until the Doctrine bridge exists; `in_memory` is for tests and prototypes. |
+| `persistence.driver` | enum `in_memory` \| `doctrine` \| `custom` | `doctrine` if `doctrine/orm` is installed, else `in_memory` | Persistence adapter. `doctrine` needs DoctrineBundle (the container build fails without it); `in_memory` is for tests and prototypes. |
+| `persistence.entity_manager` | string | `default` | Entity manager that gets the mapping (driver `doctrine`). **Use a dedicated entity manager** (see [Doctrine](#doctrine)): the repositories flush the whole unit of work of the entity manager they use. |
 | `persistence.employer_account_repository` | string \| null | `null` | Service id of your `EmployerAccountRepository` (driver `custom`). |
 | `persistence.mandate_repository` | string \| null | `null` | Service id of your `MandateRepository` (driver `custom`). |
 | `persistence.declaration_record_repository` | string \| null | `null` | Service id of your `DeclarationRecordRepository` (driver `custom`). |
@@ -79,7 +80,9 @@ Validation rules enforced at container build time:
 - `outbox.enabled` with the `custom` driver requires `outbox.service`.
 - `lock.enabled: true` requires `symfony/lock`; `scheduler.enabled: true` requires `symfony/scheduler`.
 - `workflow.default_page_size` must not exceed `workflow.max_page_size`.
-- The `custom` driver requires the three repository service ids; the `doctrine` driver is refused.
+- The `custom` driver requires the three repository service ids.
+- The `doctrine` driver requires DoctrineBundle to be registered (`LogicException` when the container is built otherwise):
+  an application with `doctrine/orm` but without DoctrineBundle must set `persistence.driver` explicitly.
 - `request_id_header` and `application_id_header.name` must be different headers; `application_id_header` needs both
   `name` and `value`, or neither.
 - `business_timezone` must be a known time zone, `outbox.retention`, `workflow.stale_submission_after` and the
@@ -119,7 +122,9 @@ request a token per run. Tokens are secrets: do not expose the pool through a ca
   `declaration_record_repository`. Give the `transaction_manager` they share: with the outbox, the integration events are
   written in the transaction of the state change ([ADR 0012](adr/0012-integration-events.md)), which an
   `ImmediateTransactionManager` (the default) cannot guarantee. `workflow_statistics` is optional.
-- Doctrine: coming with the Doctrine bridge.
+- `doctrine` (default when `doctrine/orm` is installed): the Doctrine repositories, transaction manager, statistics and
+  outbox on the entity manager `persistence.entity_manager`, see [Doctrine](#doctrine) and [doctrine.md](doctrine.md).
+  The tables are yours to migrate (`doctrine:migrations:diff`).
 
 ## Console commands
 
@@ -136,7 +141,7 @@ URSSAF error descriptions are not printed.
 | `urssaf:cesu:employer:import` | Track an employer already registered at URSSAF (no URSSAF call). | optional if one tenant is configured |
 | `urssaf:cesu:mandate:register` | Notify the third-party declaration mandate of a tracked employer (method 030). | optional if one tenant is configured |
 | `urssaf:cesu:mandate:cancel` | Cancel the mandate (method 031), after a confirmation (`--force` in non-interactive mode). | optional if one tenant is configured |
-| `urssaf:cesu:employers:sync-status` | Refresh the tracked employers, least recently checked first (method 020, employer only); `--async` dispatches one message per tenant. | optional, default: every tenant with employers |
+| `urssaf:cesu:employers:sync-status` | Refresh the tracked employers, least recently checked first (method 020, employer only); `--async` dispatches one message per tenant. | optional, default: every tenant with employers; **required with `--employer`** (an employer is identified within a tenant) |
 | `urssaf:cesu:declarations:reconcile-stale` | Move the declarations left `submitting` for `workflow.stale_submission_after` to manual review: they are never resent ([ADR 0003](adr/0003-retry-and-unknown-outcome.md)). | none (all tenants) |
 | `urssaf:cesu:declarations:resolve` | Settle an `outcome_unknown` declaration after a manual check: `--declared-as=<idDeclaration>` or `--not-received`. | optional if one tenant is configured |
 | `urssaf:cesu:requeue-invalid-credentials` | Move the declarations refused for invalid credentials back to `pending`, once the credentials are fixed; send them again with `DeclareSalary`. | optional if one tenant is configured |
@@ -182,6 +187,7 @@ after each deployment, or in the CI of the application with `--skip-remote`.
 | `authentication` | failure: URSSAF refuses the credentials or cannot be reached. A new access token is requested for every tenant (any cached one is ignored), the tokens of the application are not touched. Skipped with `--skip-remote`; replaced by a `gateway` warning when `gateway.simulated` is enabled |
 | `token store` | warning: the tokens are stored in `cache.app` instead of a dedicated pool |
 | `persistence` | warning: `in_memory` persistence (every record is lost when the process ends) |
+| `database schema` | failure (driver `doctrine`): the package tables are missing or differ from the mapping; warning: the entity manager is the `default` one |
 | `lock` | warning: the lock is disabled or `symfony/lock` is missing |
 
 Add checks of your own by implementing `Bridge\Symfony\Diagnostic\InstallationCheck` (autoconfigured, tag
@@ -279,6 +285,31 @@ urssaf_tierce_declaration_cesu:
 The store must be visible to all the processes that may overlap: `flock` only protects processes of the same machine.
 `ttl` bounds how long the lock of a crashed process blocks the operation. Without `symfony/lock` (or with
 `enabled: false`) everything just runs, protected by the claims only.
+
+## Doctrine
+
+When the driver is `doctrine` and DoctrineBundle is registered, the bundle prepends the Doctrine configuration: the
+custom DBAL types and the XML mapping (see [doctrine.md](doctrine.md)). With a non-default `entity_manager`, the mapping
+is attached to that entity manager only.
+
+**Use a dedicated entity manager** (`persistence.entity_manager: urssaf_cesu`, with its own DBAL connection). The
+repositories `flush()` on every save and a Doctrine flush writes *all* pending changes of the entity manager: on a shared
+entity manager, a package call would also flush (and, on failure, roll back) half-finished changes of your own entities.
+`DoctrineTransactionManager` detaches only the package entities after a rollback and never clears your entities.
+
+The violation codes `employer_account.concurrent_modification`, `mandate.concurrent_modification` and
+`declaration_record.concurrent_modification` (optimistic lock lost, [doctrine.md](doctrine.md#identity-and-concurrency))
+are translated like every other code (English and French shipped).
+
+The bundle does not touch `doctrine.orm.auto_generate_proxy_classes`: the mapped entities are not `final` (final by
+convention), so the proxy cache warmer can pre-generate their proxies in every mode.
+
+**Native lazy objects (PHP 8.4+).** On PHP 8.4 or higher, with an ORM that implements them (3.4+), the bundle also
+prepends `doctrine.orm.enable_native_lazy_objects: true`: the ORM then uses PHP lazy objects instead of generated
+proxies, which is required when `symfony/var-exporter` 8 is installed (it no longer ships the lazy ghosts the ORM
+proxies rely on; without it the ORM throws "Symfony LazyGhost is not available"). It is only a default: your own
+`doctrine` configuration wins, for instance `enable_native_lazy_objects: false` with `symfony/var-exporter` 6.4 or 7. On
+PHP 8.2 and 8.3 nothing is prepended.
 
 ## Validation and forms
 

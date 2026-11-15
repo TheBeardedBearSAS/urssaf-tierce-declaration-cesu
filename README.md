@@ -46,6 +46,7 @@ OAuth2 client credentials, scope `tiersdecl.cesu`, base URL `https://api.urssaf.
 - [docs/roadmap.md](docs/roadmap.md) — planned architecture and order of work.
 - [docs/workflow.md](docs/workflow.md) — employer, mandate and declaration lifecycles, idempotency, retries, monitoring.
 - [docs/integration-events.md](docs/integration-events.md) — public integration events (`urssaf.cesu.*`) and the outbox.
+- [docs/doctrine.md](docs/doctrine.md) — Doctrine persistence: tables, dedicated entity manager, concurrency, personal data and encryption, migrations.
 - [docs/standalone.md](docs/standalone.md) — wiring without the Symfony bundle: builder options, scheduling, manual wiring.
 - [docs/symfony.md](docs/symfony.md) — Symfony bundle: configuration reference, console commands, Messenger, Scheduler, locks, validation, translations.
 - [docs/testing.md](docs/testing.md) — testing a host application with the in-memory simulated gateway.
@@ -85,8 +86,9 @@ Layers are enforced by Deptrac (`deptrac.yaml`):
 - **Application**: one `final readonly` handler per use case, ports implemented by the outer layers.
 - **Infrastructure**: `UrssafHttpGateway` (implements `CesuGateway`), OAuth2 token provider, JSON client, adapters.
 - **Standalone** / **Testing**: framework-free builder and an in-memory simulated gateway for host test suites.
-- **Bridge**: `Bridge\Symfony` (bundle, commands, Messenger, Lock, Scheduler) and `Bridge\Doctrine` (mapping, types,
-  repositories).
+- **Bridge**: `Bridge\Symfony` (bundle, commands, Messenger, Lock, Scheduler) and `Bridge\Doctrine` (XML mapping, DBAL
+  types, repositories with atomic claims, optimistic locking, outbox, statistics, transaction manager; no IBAN, BIC nor
+  NIR column).
 
 Decisions: [docs/adr/](docs/adr/).
 
@@ -113,7 +115,7 @@ $urssaf = UrssafTierceDeclarationCesuBuilder::create(
     new InMemoryCredentialsProvider(['tenant-1' => Credentials::of((string) getenv('URSSAF_CLIENT_ID'), (string) getenv('URSSAF_CLIENT_SECRET'))]),
     ApiConfiguration::forEnvironment(Environment::Sandbox),
 )
-    ->withRepositories($accounts, $mandates, $declarations, $transactions, $statistics) // default: in-memory (tests, prototypes)
+    ->withDoctrine($urssafEntityManager)                                               // a dedicated entity manager (docs/doctrine.md); default: in-memory (tests, prototypes)
     ->withTokenStore($sharedTokenStore)                                                 // default: in-memory (a token per process)
     ->build();
 
@@ -168,6 +170,7 @@ urssaf_tierce_declaration_cesu:
             client_id: '%env(URSSAF_CESU_CLIENT_ID)%'
             client_secret: '%env(URSSAF_CESU_CLIENT_SECRET)%'
     token_store: { cache_pool: urssaf_cesu.token_cache }
+    persistence: { driver: doctrine, entity_manager: urssaf_cesu }   # a dedicated entity manager; default driver when doctrine/orm is installed
     # persistence: { driver: custom, employer_account_repository: ..., mandate_repository: ..., declaration_record_repository: ... }
 
 when@test:
@@ -202,12 +205,14 @@ php bin/console urssaf:cesu:check
 php bin/console urssaf:cesu:employers:sync-status
 ```
 
-The default persistence (`in_memory`) loses every record when the process ends: give your own repositories (`custom`
-driver) before going further, see [docs/symfony.md](docs/symfony.md#persistence).
+Create the tables with your migrations (the package ships none): `php bin/console doctrine:migrations:diff` then
+`doctrine:migrations:migrate` ([docs/doctrine.md](docs/doctrine.md)). Without Doctrine, the `in_memory` persistence loses
+every record when the process ends: give your own repositories (`custom` driver), see
+[docs/symfony.md](docs/symfony.md#persistence).
 
 ## Requirements
 
-PHP 8.2+. Symfony 6.4 / 7.x for the bundle (optional). Development only needs Docker: every `make` target runs in a container.
+PHP 8.2+. Symfony 6.4 / 7.x for the bundle (optional). Doctrine persistence (optional): `doctrine/orm` 3.5.3+, `doctrine/dbal` 4.0+ and, with Symfony, `doctrine/doctrine-bundle` 2.19+. Development only needs Docker: every `make` target runs in a container.
 
 ## Development
 

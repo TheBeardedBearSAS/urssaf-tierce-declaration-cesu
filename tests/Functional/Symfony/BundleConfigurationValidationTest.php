@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace TheBeardedBear\UrssafTierceDeclarationCesu\Tests\Functional\Symfony;
 
+use LogicException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Config\Definition\Exception\InvalidConfigurationException;
@@ -54,7 +55,6 @@ final class BundleConfigurationValidationTest extends TestCase
             ],
             'The "custom" persistence driver requires "outbox.service" when the outbox is enabled.',
         ];
-        yield 'R7 doctrine driver' => [['persistence' => ['driver' => 'doctrine']], 'The "doctrine" persistence driver comes with the Doctrine bridge, not available in this version: use "in_memory" or "custom".'];
         yield 'R8 custom driver without repositories' => [['persistence' => ['driver' => 'custom']], 'The "custom" driver requires "employer_account_repository", "mandate_repository" and "declaration_record_repository".'];
         yield 'R8 custom driver with one repository' => [['persistence' => ['driver' => 'custom', 'employer_account_repository' => 'a']], 'The "custom" driver requires "employer_account_repository"'];
         yield 'R9 default page above max' => [['workflow' => ['default_page_size' => 200, 'max_page_size' => 100]], '"default_page_size" must not be greater than "max_page_size".'];
@@ -84,10 +84,19 @@ final class BundleConfigurationValidationTest extends TestCase
         yield 'no attempts' => [['workflow' => ['max_submission_attempts' => 0]], 'max_submission_attempts'];
         yield 'no default page size' => [['workflow' => ['default_page_size' => 0]], 'default_page_size'];
         yield 'no max page size' => [['workflow' => ['default_page_size' => 1, 'max_page_size' => 0]], 'workflow.max_page_size'];
+        yield 'empty entity manager' => [['persistence' => ['driver' => 'in_memory', 'entity_manager' => '']], 'persistence.entity_manager'];
         yield 'unknown driver' => [['persistence' => ['driver' => 'mongo']], 'persistence.driver'];
         // @mago-expect lint:no-literal-password Fake credentials of a test configuration.
         yield 'empty client id' => [['credentials' => ['tenant-1' => ['client_id' => '', 'client_secret' => 'x']]], 'client_id'];
         yield 'empty client secret' => [['credentials' => ['tenant-1' => ['client_id' => 'x', 'client_secret' => '']]], 'client_secret'];
+    }
+
+    public function testTheDoctrineDriverNeedsDoctrineBundle(): void
+    {
+        $this->expectException(LogicException::class);
+        $this->expectExceptionMessage('The "doctrine" persistence driver requires DoctrineBundle (doctrine/doctrine-bundle): register it, or set "persistence.driver" to "in_memory" or "custom".');
+
+        Harness::boot(['persistence' => ['driver' => 'doctrine']]);
     }
 
     public function testTheEnvironmentIsRequired(): void

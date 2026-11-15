@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<doctrine-mapping xmlns="http://doctrine-project.org/schemas/orm/doctrine-mapping"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  xsi:schemaLocation="http://doctrine-project.org/schemas/orm/doctrine-mapping https://www.doctrine-project.org/schemas/orm/doctrine-mapping.xsd">
+    <!-- Mandate of an employer: the employer identification and the timeline are embedded as columns, the last presence
+         check is a JSON column. The external reference is the employer's (several mandates share it): it is not unique.
+         "One active mandate per (tenant, Cesu number)" is the key table urssaf_cesu_active_mandates (ActiveMandate),
+         written in the transaction of every save. "version" is the optimistic lock token of the persistence layer. -->
+    <entity name="TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Mandate\Mandate" table="urssaf_cesu_mandates">
+        <indexes>
+            <index name="idx_urssaf_cesu_mandate_employer" columns="tenant_id,cesu_number,notified_at"/>
+            <index name="idx_urssaf_cesu_mandate_state" columns="tenant_id,state"/>
+        </indexes>
+        <id name="id" type="urssaf_cesu_mandate_id" column="id" length="64">
+            <generator strategy="NONE"/>
+        </id>
+        <field name="version" type="integer" version="true"/>
+        <field name="tenantId" type="urssaf_cesu_tenant_id" column="tenant_id" length="64"/>
+        <field name="externalReference" type="urssaf_cesu_external_reference" column="external_reference" length="191"/>
+        <field name="state" type="string" column="state" length="16" enum-type="TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Mandate\MandateState"/>
+        <field name="lastCheck" type="urssaf_cesu_mandate_presence_check" column="last_check" nullable="true"/>
+        <embedded name="employer" class="TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Employer\Employer" use-column-prefix="false"/>
+        <embedded name="timeline" class="TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Mandate\MandateTimeline" use-column-prefix="false"/>
+    </entity>
+</doctrine-mapping>

@@ -144,9 +144,11 @@ find an employer from its registration data, so nothing can be reconciled automa
 - `invalid_credentials` returns a result, not an exception. After fixing the credentials,
   `RequeueAfterInvalidCredentials` moves the records back to `pending`; repeat while the count reaches the limit, then
   call `DeclareSalary` again for each.
-- Race: a very slow `DeclareSalary` racing `ReconcileStaleDeclarations` on the same record would throw
-  `InvalidStateTransition` when applying its outcome. With the default 15 minutes it needs a stuck process; an
-  optimistic version column comes with the Doctrine bridge.
+- Race: a very slow `DeclareSalary` racing `ReconcileStaleDeclarations` on the same record loses: its outcome
+  transaction is refused with `declaration_record.concurrent_modification` (Doctrine optimistic lock, see
+  [doctrine.md](doctrine.md#identity-and-concurrency)) and the record stays `outcome_unknown` (reason `stale_submission`)
+  for the operator, who finds the `idDeclaration` on cesu.urssaf.fr. The in-memory repositories have no such check
+  (`get()` returns a clone, so the last writer wins). With the default 15 minutes it needs a stuck process.
 
 ## Events, outbox pattern and safety crons
 
