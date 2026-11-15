@@ -912,6 +912,8 @@ prestations list uses a different coding, do not reuse it).
 
 ## 5. Open points
 
+Points observed by the live sandbox suite are settled with `make test-contract` (see `var/contract/sandbox-report.json` and the README, "Sandbox contract tests").
+
 Discrepancies Swagger v2.0.0 / PDF v2.0.2 (prd and sb contracts are otherwise identical):
 
 1. `etatCesuPlus`: `active` / `bloque` / `desactive` (Swagger) vs `activé` / `bloqué` / `désactivé` (PDF, including its
