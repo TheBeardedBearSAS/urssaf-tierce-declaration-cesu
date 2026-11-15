@@ -29,14 +29,13 @@ Every `with...()` method returns a new builder:
 | `withLogger(LoggerInterface)` | none | Logs of the HTTP gateway and of the event publication failures (never personal data, [ADR 0007](adr/0007-personal-data.md)). |
 | `withRateLimiter(RateLimiter)` | `SlidingWindowRateLimiter` | The HTTP gateway enforces the URSSAF quota (2 500 calls per hour per tenant, [ADR 0011](adr/0011-quotas-and-rate-limit.md)) in the process; `NoopRateLimiter` disables it. |
 | `withPolicy(WorkflowPolicy)` | defaults | Page sizes, stale submission delay, attempts, business time zone, mandate guard... |
+| `withDoctrine(EntityManagerInterface)` | in-memory repositories | Doctrine repositories, transaction manager and statistics on a **dedicated** entity manager ([doctrine.md](doctrine.md)); the outbox stays separate: `withOutbox(new DoctrineOutbox($entityManager), $sink)`. |
 | `withRepositories($accounts, $mandates, $declarations, $transactions, ?$statistics)` | in-memory | Your own persistence; without statistics `getWorkflowOverview()` throws. |
 | `withOutbox(Outbox, IntegrationEventSink)` | no outbox | Integration events (see [integration-events.md](integration-events.md)); `relayOutbox()` needs it. |
 | `withGateway(CesuGateway)` | HTTP gateway | For instance the `Testing\SimulatedCesuGateway` in tests ([testing.md](testing.md)). |
 
-Doctrine persistence (`withDoctrine()`) comes with the Doctrine bridge.
-
 The defaults (in-memory repositories, statistics and token store) are meant for tests and prototypes. In production,
-give your own repositories and a token store shared by every process.
+use `withDoctrine()` or give your own repositories, and a token store shared by every process.
 
 ## Scheduling
 
@@ -86,4 +85,23 @@ $declareSalary = new DeclareSalaryHandler(
     $unitOfWork,
     $policy,
 );
+```
+
+The same wiring on Doctrine, without a framework (the entity manager must be dedicated to the package, see
+[doctrine.md](doctrine.md)):
+
+```php
+use TheBeardedBear\UrssafTierceDeclarationCesu\Bridge\Doctrine\DoctrineIntegration;
+use TheBeardedBear\UrssafTierceDeclarationCesu\Bridge\Doctrine\DoctrineTransactionManager;
+use TheBeardedBear\UrssafTierceDeclarationCesu\Bridge\Doctrine\Repository\DoctrineDeclarationRecordRepository;
+use TheBeardedBear\UrssafTierceDeclarationCesu\Bridge\Doctrine\Repository\DoctrineEmployerAccountRepository;
+use TheBeardedBear\UrssafTierceDeclarationCesu\Bridge\Doctrine\Repository\DoctrineMandateRepository;
+use TheBeardedBear\UrssafTierceDeclarationCesu\Bridge\Doctrine\Repository\DoctrineOutbox;
+
+DoctrineIntegration::registerTypes();   // and DoctrineIntegration::mappingDriver() in the ORM configuration
+
+$unitOfWork = new UnitOfWork(new DoctrineTransactionManager($entityManager), $eventPublisher, new PsrLoggerFailureReporter($logger), new DoctrineOutbox($entityManager));
+$accounts = new DoctrineEmployerAccountRepository($entityManager);
+$mandates = new DoctrineMandateRepository($entityManager);
+$declarations = new DoctrineDeclarationRecordRepository($entityManager);
 ```

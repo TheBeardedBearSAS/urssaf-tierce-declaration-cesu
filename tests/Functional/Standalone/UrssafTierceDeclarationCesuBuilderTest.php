@@ -47,6 +47,7 @@ use TheBeardedBear\UrssafTierceDeclarationCesu\Application\Query\GetEmployerAcco
 use TheBeardedBear\UrssafTierceDeclarationCesu\Application\Query\GetWorkflowOverview;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Application\Query\VerifyEmployee;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Application\Query\VerifyEmployer;
+use TheBeardedBear\UrssafTierceDeclarationCesu\Bridge\Doctrine\Repository\DoctrineEmployerAccountRepository;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Declaration\DeclarationState;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Declaration\Input\EmploymentPeriodDraft;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Employee\Input\EmployeeReferenceDraft;
@@ -67,6 +68,7 @@ use TheBeardedBear\UrssafTierceDeclarationCesu\Infrastructure\Urssaf\UrssafHttpG
 use TheBeardedBear\UrssafTierceDeclarationCesu\Standalone\UrssafTierceDeclarationCesu;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Standalone\UrssafTierceDeclarationCesuBuilder;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Testing\SimulatedCesuGateway;
+use TheBeardedBear\UrssafTierceDeclarationCesu\Tests\Functional\Doctrine\Support\TestDatabase;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Tests\Unit\Application\Fake\FailingEventPublisher;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Tests\Unit\Application\Fake\FixedClock;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Tests\Unit\Application\Fake\RecordingIntegrationEventSink;
@@ -206,6 +208,23 @@ final class UrssafTierceDeclarationCesuBuilderTest extends TestCase
         static::assertCount($relay->dispatched, $sink->deliveredIds());
         $clock->moveTo('2026-12-31T00:00:00Z');
         static::assertSame($relay->dispatched, $package->purgeOutbox()(new PurgeOutbox(new DateInterval('P30D'))));
+    }
+
+    public function testTheDoctrinePersistenceIsUsedWithItsStatistics(): void
+    {
+        $entityManager = TestDatabase::entityManager();
+        $urssaf = new SimulatedCesuGateway();
+        $package = self::builder()->withGateway($urssaf)->withDoctrine($entityManager)->build();
+        $tenant = TenantId::fromString('tenant-1');
+        $reference = ExternalReference::fromString('employer-1');
+
+        $imported = $package->importEmployer()(new ImportEmployer($tenant, $reference, EmployerSamples::employer()));
+        $entityManager->clear();
+
+        $stored = (new DoctrineEmployerAccountRepository($entityManager))->findByExternalReference($tenant, $reference);
+        static::assertNotNull($stored);
+        static::assertSame($imported->accountId, $stored->id()->value());
+        static::assertSame(1, $package->getWorkflowOverview()(GetWorkflowOverview::forTenant($tenant))[0]->employers['registered']);
     }
 
     public function testAnUnknownOutcomeIsResolvedByAnOperator(): void

@@ -16,3 +16,4 @@
 | [0011](0011-quotas-and-rate-limit.md) | Quotas and rate limiting |
 | [0012](0012-integration-events.md) | Public integration events |
 | [0013](0013-symfony-bridge.md) | Symfony bridge |
+| [0014](0014-doctrine-bridge.md) | Doctrine bridge |

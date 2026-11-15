@@ -8,6 +8,11 @@ use Symfony\Component\DependencyInjection\Loader\Configurator\ServicesConfigurat
 use Symfony\Component\DependencyInjection\Reference;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Application\Port\TransactionManager;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Application\Port\WorkflowStatistics;
+use TheBeardedBear\UrssafTierceDeclarationCesu\Bridge\Doctrine\DoctrineTransactionManager;
+use TheBeardedBear\UrssafTierceDeclarationCesu\Bridge\Doctrine\Repository\DoctrineDeclarationRecordRepository;
+use TheBeardedBear\UrssafTierceDeclarationCesu\Bridge\Doctrine\Repository\DoctrineEmployerAccountRepository;
+use TheBeardedBear\UrssafTierceDeclarationCesu\Bridge\Doctrine\Repository\DoctrineMandateRepository;
+use TheBeardedBear\UrssafTierceDeclarationCesu\Bridge\Doctrine\Repository\DoctrineWorkflowStatistics;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Declaration\DeclarationRecordRepository;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Employer\EmployerAccountRepository;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Mandate\MandateRepository;
@@ -18,20 +23,24 @@ use TheBeardedBear\UrssafTierceDeclarationCesu\Infrastructure\Persistence\InMemo
 use TheBeardedBear\UrssafTierceDeclarationCesu\Infrastructure\Transaction\ImmediateTransactionManager;
 
 /**
- * Repositories and transaction manager of the selected persistence driver ("doctrine" is refused at build time until
- * the Doctrine bridge exists, so only "in_memory" and "custom" reach this class).
+ * Repositories and transaction manager of the selected persistence driver.
  *
- * Source: reference PersistenceRegistrar, lot 6 design §4.3, ADR 0013.
+ * Source: reference PersistenceRegistrar, lot 6 design §4.3, lot 7 design §8.3, ADR 0013, ADR 0014.
  */
 final readonly class PersistenceRegistrar
 {
     public function __construct(private ServicesConfigurator $services) {}
 
     /**
-     * @param array{driver: string, employer_account_repository: ?string, mandate_repository: ?string, declaration_record_repository: ?string, transaction_manager: ?string, workflow_statistics: ?string} $persistence
+     * @param array{driver: string, employer_account_repository: ?string, mandate_repository: ?string, declaration_record_repository: ?string, transaction_manager: ?string, workflow_statistics: ?string, entity_manager: string} $persistence
      */
     public function register(array $persistence): void
     {
+        if ($persistence['driver'] === BundleConfiguration::DRIVER_DOCTRINE) {
+            $this->registerDoctrine(new Reference(ServiceIds::entityManager($persistence['entity_manager'])));
+
+            return;
+        }
         if ($persistence['driver'] === BundleConfiguration::DRIVER_CUSTOM) {
             $this->registerCustom($persistence);
 
@@ -57,7 +66,7 @@ final readonly class PersistenceRegistrar
     }
 
     /**
-     * @param array{driver: string, employer_account_repository: ?string, mandate_repository: ?string, declaration_record_repository: ?string, transaction_manager: ?string, workflow_statistics: ?string} $persistence
+     * @param array{driver: string, employer_account_repository: ?string, mandate_repository: ?string, declaration_record_repository: ?string, transaction_manager: ?string, workflow_statistics: ?string, entity_manager: string} $persistence
      */
     private function registerCustom(array $persistence): void
     {
@@ -68,6 +77,15 @@ final readonly class PersistenceRegistrar
         if ($persistence['workflow_statistics'] !== null) {
             $this->services->alias(WorkflowStatistics::class, $persistence['workflow_statistics']);
         }
+    }
+
+    private function registerDoctrine(Reference $entityManager): void
+    {
+        $this->services->set(EmployerAccountRepository::class, DoctrineEmployerAccountRepository::class)->args([$entityManager]);
+        $this->services->set(MandateRepository::class, DoctrineMandateRepository::class)->args([$entityManager]);
+        $this->services->set(DeclarationRecordRepository::class, DoctrineDeclarationRecordRepository::class)->args([$entityManager]);
+        $this->services->set(TransactionManager::class, DoctrineTransactionManager::class)->args([$entityManager]);
+        $this->services->set(WorkflowStatistics::class, DoctrineWorkflowStatistics::class)->args([$entityManager]);
     }
 
     private function registerTransactionManager(?string $service): void

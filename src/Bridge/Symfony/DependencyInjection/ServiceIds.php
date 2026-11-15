@@ -19,4 +19,12 @@ final class ServiceIds
     /** Token provider of urssaf:cesu:check: its own in-memory store, so that every check asks URSSAF. */
     public const PROBE_TOKEN_PROVIDER = 'urssaf_tierce_declaration_cesu.probe_token_provider';
     public const JSON_CLIENT = 'urssaf_tierce_declaration_cesu.json_client';
+
+    /**
+     * Service id of a DoctrineBundle entity manager (driver "doctrine", option "persistence.entity_manager").
+     */
+    public static function entityManager(string $name): string
+    {
+        return \sprintf('doctrine.orm.%s_entity_manager', $name);
+    }
 }

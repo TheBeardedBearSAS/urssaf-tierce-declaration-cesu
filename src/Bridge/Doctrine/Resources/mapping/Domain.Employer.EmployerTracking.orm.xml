@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<doctrine-mapping xmlns="http://doctrine-project.org/schemas/orm/doctrine-mapping"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  xsi:schemaLocation="http://doctrine-project.org/schemas/orm/doctrine-mapping https://www.doctrine-project.org/schemas/orm/doctrine-mapping.xsd">
+    <embeddable name="TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Employer\EmployerTracking">
+        <field name="stage" type="string" column="stage" length="32" enum-type="TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Employer\EmployerStage"/>
+        <field name="lastStatus" type="urssaf_cesu_employer_status" column="last_status" nullable="true"/>
+        <field name="lastStatusEmployeeKind" type="string" column="last_status_employee_kind" length="16" nullable="true" enum-type="TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Employee\EmployeeReferenceKind"/>
+        <field name="lastStatusEmployeeCesuNumber" type="urssaf_cesu_cesu_number" column="last_status_employee_cesu_number" length="14" nullable="true"/>
+        <field name="lastCheckedAt" type="urssaf_cesu_instant" column="last_checked_at" nullable="true"/>
+        <field name="updatedAt" type="urssaf_cesu_instant" column="updated_at"/>
+    </embeddable>
+</doctrine-mapping>

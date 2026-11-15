@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace TheBeardedBear\UrssafTierceDeclarationCesu\Standalone;
 
 use Closure;
+use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Application\Policy\WorkflowPolicy;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Application\Port\Clock;
@@ -21,6 +22,11 @@ use TheBeardedBear\UrssafTierceDeclarationCesu\Application\Port\WorkflowStatisti
 use TheBeardedBear\UrssafTierceDeclarationCesu\Application\Service\IgnoredFailures;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Application\Service\IgnoredOutbox;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Application\Service\UnitOfWork;
+use TheBeardedBear\UrssafTierceDeclarationCesu\Bridge\Doctrine\DoctrineTransactionManager;
+use TheBeardedBear\UrssafTierceDeclarationCesu\Bridge\Doctrine\Repository\DoctrineDeclarationRecordRepository;
+use TheBeardedBear\UrssafTierceDeclarationCesu\Bridge\Doctrine\Repository\DoctrineEmployerAccountRepository;
+use TheBeardedBear\UrssafTierceDeclarationCesu\Bridge\Doctrine\Repository\DoctrineMandateRepository;
+use TheBeardedBear\UrssafTierceDeclarationCesu\Bridge\Doctrine\Repository\DoctrineWorkflowStatistics;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Declaration\DeclarationRecordRepository;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Employer\EmployerAccountRepository;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Mandate\MandateRepository;
@@ -43,8 +49,8 @@ use TheBeardedBear\UrssafTierceDeclarationCesu\Infrastructure\Urssaf\UtcSystemCl
 /**
  * Wires the package without a framework. Every "with" method returns a new builder.
  *
- * Defaults: in-memory repositories, statistics and token store (tests and prototypes: use your own repositories, or
- * withDoctrine() once the Doctrine bridge is available, and a shared token store in production), the UTC system clock,
+ * Defaults: in-memory repositories, statistics and token store (tests and prototypes: use withDoctrine() or your own
+ * repositories, and a shared token store in production), the UTC system clock,
  * random UUIDs, no event publisher, no outbox, the default workflow policy, the HTTP gateway of
  * {@see UrssafGatewayFactory}.
  *
@@ -177,6 +183,23 @@ final class UrssafTierceDeclarationCesuBuilder
             $builder->transactions = $transactions;
             $builder->statistics = $statistics;
         });
+    }
+
+    /**
+     * The Doctrine persistence of the package, on a dedicated entity manager (docs/doctrine.md): repositories,
+     * transaction manager and workflow statistics. The outbox is separate: withOutbox(new DoctrineOutbox($entityManager), $sink).
+     *
+     * Source: reference UrssafTiersPrestationsBuilder::withDoctrine(); ADR 0014.
+     */
+    public function withDoctrine(EntityManagerInterface $entityManager): self
+    {
+        return $this->withRepositories(
+            new DoctrineEmployerAccountRepository($entityManager),
+            new DoctrineMandateRepository($entityManager),
+            new DoctrineDeclarationRecordRepository($entityManager),
+            new DoctrineTransactionManager($entityManager),
+            new DoctrineWorkflowStatistics($entityManager),
+        );
     }
 
     /**

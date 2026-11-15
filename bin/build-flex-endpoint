@@ -16,7 +16,7 @@ if ($argc !== 3) {
 }
 [, $output, $baseUrl] = $argv;
 $baseUrl = rtrim($baseUrl, '/');
-$recipesDirectory = __DIR__ . '/../recipe';
+$recipesDirectory = dirname(__DIR__) . '/recipe';
 
 /**
  * @return array<string, array{contents: list<string>, executable: bool}>
@@ -40,6 +40,7 @@ function recipeFiles(string $directory): array
 
 $index = [];
 $written = [];
+// The reference writes `glob(...) ?: []`; mago (no-shorthand-ternary) and phpstan (glob() may return false) ask for the explicit form.
 $manifests = glob($recipesDirectory . '/*/*/*/manifest.json');
 foreach ($manifests === false ? [] : $manifests as $manifestPath) {
     $versionDirectory = dirname($manifestPath);

@@ -40,7 +40,7 @@ use TheBeardedBear\UrssafTierceDeclarationCesu\Bridge\Symfony\Validation\Violati
  *     outbox: array{enabled: bool, service: ?string, sink: string, bus: string, retention: string},
  *     scheduler: array{enabled: bool, name: string, frequencies: array<string, ?string>},
  *     workflow: array{stale_submission_after: string, max_submission_attempts: int, require_local_mandate: bool, allow_foster_carer_declarations: bool, default_page_size: int, max_page_size: int},
- *     persistence: array{driver: string, employer_account_repository: ?string, mandate_repository: ?string, declaration_record_repository: ?string, transaction_manager: ?string, workflow_statistics: ?string},
+ *     persistence: array{driver: string, employer_account_repository: ?string, mandate_repository: ?string, declaration_record_repository: ?string, transaction_manager: ?string, workflow_statistics: ?string, entity_manager: string},
  *     messenger: array{enabled: bool, bus: string}
  * }
  */

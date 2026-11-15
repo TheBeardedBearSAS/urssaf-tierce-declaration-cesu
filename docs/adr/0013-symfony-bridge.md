@@ -54,3 +54,14 @@ later, personal values on the command line).
 - The Doctrine lot deletes the `doctrine` refusal rule, adds the default driver, the entity manager option, the
   Doctrine mapping prepend and the schema check, and switches the default.
 - Documented in `docs/symfony.md` and `docs/testing.md` (Symfony section).
+
+## Amendments
+
+- **2026-11-15 (lead-accepted, lot 7).** Decision 3 is superseded: since the Doctrine bridge
+  ([ADR 0014](0014-doctrine-bridge.md)) the `doctrine` driver is wired and is the default when `doctrine/orm` is
+  installed (`in_memory` otherwise); selecting it without DoctrineBundle fails at container build; the `doctrine`
+  refusal rule (R7) is removed; `persistence.entity_manager` is added.
+- **2026-11-15 (lead-accepted, lot 6 open point 16).** The in-memory uniqueness codes (`employer_account.duplicate_*`,
+  `mandate.duplicate_active`, `declaration_record.duplicate_*`) are translated like every other code.
+- **2026-11-15 (lead-accepted, clarification of decision 13).** `urssaf:cesu:employers:sync-status` with an employer
+  selector requires `--tenant`: an employer is identified within a tenant (ADR 0010).
