@@ -1,0 +1,45 @@
+<?php
+
+declare(strict_types=1);
+
+namespace TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Declaration\Event;
+
+use DateTimeImmutable;
+use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Declaration\DeclarationRecordId;
+use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Shared\DomainEvent;
+use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Shared\ExternalReference;
+use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Shared\Instant;
+use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Shared\TenantId;
+
+/**
+ * URSSAF reported a duplicate: the declaration already exists (state already_declared, final).
+ */
+final readonly class DeclarationAlreadyDeclared implements DomainEvent
+{
+    public function __construct(
+        private DeclarationRecordId $recordId,
+        private TenantId $tenantId,
+        private ExternalReference $externalReference,
+        private Instant $occurredAt,
+    ) {}
+
+    public function recordId(): DeclarationRecordId
+    {
+        return $this->recordId;
+    }
+
+    public function tenantId(): TenantId
+    {
+        return $this->tenantId;
+    }
+
+    public function externalReference(): ExternalReference
+    {
+        return $this->externalReference;
+    }
+
+    public function occurredAt(): DateTimeImmutable
+    {
+        return $this->occurredAt->toDateTimeImmutable();
+    }
+}

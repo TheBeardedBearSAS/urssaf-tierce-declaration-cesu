@@ -13,7 +13,10 @@ reconciliation.
 - `Domain\Employer\EmployerAccount` (aggregate, per tenant and `numeroCesu`): keeps the last `EmployerStatus`
   snapshot (020) with the time it was read, the registration origin (registered through 010 or imported) and the
   derived `EmployerStage`: `registered` → `mandate_notified` (030) → `mandate_confirmed` (020 `mandatPresent`) →
-  `cesu_plus_active` → `aici_active`; `mandate_cancelled` after 031. Stages follow 020, they never block a call.
+  `aici_active`; `mandate_cancelled` after 031. Stages follow 020, they never block a call. Cesu+ is a state of an
+  employer/employee **pair** (020 `etatCesuPlus`), so it is not an employer stage: the snapshot keeps the reference kind and,
+  when known, the employee Cesu number it was read for (no NIR or administrative data, ADR 0007). Employers and
+  mandates carry the host's `ExternalReference`, unique per tenant.
 - `Domain\Mandate\Mandate` (aggregate, per tenant and employer): `notified` → `confirmed` (020) → `cancelled`;
   re-notification after a cancellation creates a new mandate.
 - `Domain\Declaration\DeclarationRecord` (aggregate): `pending` → `submitting` (atomic claim) → `declared`
@@ -21,9 +24,11 @@ reconciliation.
   (ADR 0003) | `error` (retryable failure proven not sent, back to `pending` until `max_submission_attempts`) |
   `invalid_credentials` (requeued by `RequeueAfterInvalidCredentials`). Invalid transitions throw
   `InvalidStateTransition`.
-- `DeclareSalary` creates the record, claims it and submits it synchronously; Messenger can run the submission
-  asynchronously from the same record. Idempotency: same tenant + external reference + same content returns the
-  existing record; a different content throws `DeclarationAlreadyRecorded`.
+- `DeclareSalary` creates the record, claims it and submits it synchronously. The record never holds the payload
+  (ADR 0007): a retry is the host calling `DeclareSalary` again with the same external reference and declaration
+  (checked by a fingerprint that excludes personal data); there is no asynchronous declaration submission.
+  Idempotency: same tenant + external reference + same content returns the existing record; a different content
+  throws `DeclarationAlreadyRecorded`.
 - `SyncEmployerStatus` (020) refreshes employer and mandate state; it is the only polling.
 
 ## Consequences

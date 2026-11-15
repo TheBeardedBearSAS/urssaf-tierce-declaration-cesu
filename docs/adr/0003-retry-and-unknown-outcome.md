@@ -19,7 +19,8 @@ the first `idDeclaration`), and a resend of 010 hits the e-mail uniqueness check
 - Declarations: an unknown outcome moves the local declaration to `outcome_unknown`; `ReconcileStaleDeclarations`
   moves declarations left `submitting` past `stale_submission_after` to `outcome_unknown` with outcome
   `manual_review`. An operator checks on cesu.urssaf.fr, then records the result (`ResolveDeclarationOutcome`:
-  declared with its `idDeclaration`, or not received → `pending` again).
+  declared with its `idDeclaration`, or not received → `pending` again, then resent by the host calling
+  `DeclareSalary` with the same declaration).
 - The duplicate business error on 050 ("Une déclaration est déjà enregistrée pour cette période d’emploi.") maps to
   `already_declared` (final, no `idDeclaration`).
 - Messenger: `OutcomeUnknown` and every non-retryable package exception become unrecoverable; `RetryableException`

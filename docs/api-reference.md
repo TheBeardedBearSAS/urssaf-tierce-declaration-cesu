@@ -963,3 +963,16 @@ Behaviour and environment not published:
     `XX,XX` messages.
 25. Whether the first declaration for a pair can reuse a `numeroCesu` obtained through 021 (the PDF forbids it) — to confirm
     on the sandbox.
+
+Assumptions taken by the domain layer (to confirm on the sandbox):
+
+26. Amounts read from responses (PAS, debits, AICI) are modelled as non-negative `Money`; a negative value would fail the
+    response mapping (`UnexpectedUrssafResponse`).
+27. `etatCesuPlus` accepts the PDF spellings (`activé`, `bloqué`, `désactivé`) in precomposed UTF-8 only (no Unicode
+    normalisation, no `intl` dependency), next to the Swagger values.
+28. `Coefficient` is limited to 4 decimals: a permissive assumption (no precision is published). Family foster carer
+    declarations are refused by the API anyway (§1.2).
+29. `montantAcompte` (`Deposit`) must be strictly positive: the Swagger minimum is 0.01, the PDF publishes none (see 4).
+30. Formats kept permissive where only lengths are published (see 23): postal and municipality codes are 5 alphanumeric
+    characters, country and department codes at most 3 non-space characters, the NIR 15 non-space characters, IBAN 1 to
+    34 and BIC 1 to 11 alphanumeric characters (no checksum), `idDeclaration` at most 64 characters.

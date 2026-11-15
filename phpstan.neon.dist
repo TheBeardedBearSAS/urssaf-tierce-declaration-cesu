@@ -34,11 +34,20 @@ parameters:
                 - DomainException
                 - LogicException
                 - RuntimeException
+                # Base class of every domain exception (violation code + params), ADR 0000 §13.
+                - TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Exception\DomainException
                 # Framework extension points without an interface alternative (bridges only).
                 - Doctrine\DBAL\Types\Type
                 - Symfony\Component\HttpKernel\Bundle\AbstractBundle
                 - Symfony\Component\Console\Command\Command
                 - Symfony\Component\HttpKernel\Kernel
+        # Doctrine generates lazy-loading proxies by extending the mapped entities, so the entities cannot be final;
+        # they are final by convention (@final phpdoc). Embeddables are never proxied and stay final.
+        final:
+            classesNotRequiredToBeAbstractOrFinal:
+                - TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Employer\EmployerAccount
+                - TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Mandate\Mandate
+                - TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Declaration\DeclarationRecord
         # Disabled rules (DDD value objects / domain model), each one justified:
         # Optional value-object arguments and "withX" factories legitimately default (e.g. currency, locale).
         noConstructorParameterWithDefaultValue:
