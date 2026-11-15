@@ -36,6 +36,8 @@ parameters:
                 - RuntimeException
                 # Base class of every domain exception (violation code + params), ADR 0000 §13.
                 - TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Exception\DomainException
+                # Common properties of the public integration events (scalar, readonly, rebuilt by named arguments).
+                - TheBeardedBear\UrssafTierceDeclarationCesu\Contract\Event\IntegrationEvent
                 # Framework extension points without an interface alternative (bridges only).
                 - Doctrine\DBAL\Types\Type
                 - Symfony\Component\HttpKernel\Bundle\AbstractBundle

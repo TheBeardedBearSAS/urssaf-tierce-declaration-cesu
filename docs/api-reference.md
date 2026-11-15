@@ -976,3 +976,20 @@ Assumptions taken by the domain layer (to confirm on the sandbox):
 30. Formats kept permissive where only lengths are published (see 23): postal and municipality codes are 5 alphanumeric
     characters, country and department codes at most 3 non-space characters, the NIR 15 non-space characters, IBAN 1 to
     34 and BIC 1 to 11 alphanumeric characters (no checksum), `idDeclaration` at most 64 characters.
+
+Assumptions taken by the wire layer (lot 2, to confirm on the sandbox):
+
+31. Nothing is `required` in the Swagger responses (see 18): `inscrit`, `activationCesu` and `activationAici` are required
+    (they are the answer), `mandatPresent` and `etatAICI` read as `false` when absent or null (an unregistered employer
+    may come without them).
+32. Amounts with more than two decimals in responses are rounded to the cent, not refused: a refusal on a successful 050
+    would turn a declared salary into an unknown outcome. The rounding rules are not published (see 24).
+33. `idDeclaration` is accepted as a JSON integer and converted to its decimal string (the PDF example is numeric and the
+    response has no example).
+34. Cesu numbers read from responses (010, 021) are trimmed (the PDF 021 example has a leading space, see 13).
+35. `agrementAF` is sent whenever present, including with an `infosSalarie` that only carries a `numeroCesu` (the PDF only
+    lets `typeEmploi` and `congesPayes` accompany it, but `agrementAF` is required for family foster carers). AF
+    declarations are refused by the API anyway (§1.2) and locally unless opted in (ADR 0009).
+36. 070 requires `nomUsage` (see 10): an employer without usage name passes the birth name, documented on
+    `AiciActivationRequest`. The 070 names use a permissive value object (30 characters, no pattern) rather than the 010
+    name pattern, so that no rule is invented.

@@ -24,6 +24,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   number, NIR, administrative data); declaration sum type (standard, Cesu+), incomes, supplements, paid leave, foster
   carer approval, result; contribution estimate; local lifecycles of employers, mandates and declarations (ADR 0006);
   drafts and factories reporting every violation; local pre-checks of ADR 0009.
+- Application ports (src/Application/Port): credentials, token store, clock, id generator, rate limiter (global hourly
+  quota, ADR 0011), the nine operations with their retry safety (ADR 0003), event publisher, outbox and integration event
+  sink, transactions, workflow statistics; the CesuGateway port split per operation (010 to 070), its query and result
+  DTOs, raw API errors, their classification (ErrorKind, BusinessError, ADR 0005) and the gateway exceptions including
+  OutcomeUnknown; the 070 AICI activation request (Domain). Contract layer with the IntegrationEvent base class
+  (ADR 0012). Wire layer (src/Infrastructure/Urssaf/Wire): defensive JSON payload reader, float-free JSON encoder,
+  date-only dates (ADR 0001), amounts in cents, half-days, query parameters and accord encoding (ADR 0008), request and
+  response mappers of every operation, error payload parser, ERR_METIER classifier and error code catalogue.
 
 ### Changed
 
