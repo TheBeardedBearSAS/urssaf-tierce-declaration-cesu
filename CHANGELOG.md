@@ -7,6 +7,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-11-16
+
+First release.
+
+### Upgrading
+
+- Driver `doctrine`: generate and run the migration for the `urssaf_cesu_*` tables (`doctrine:migrations:diff`,
+  `doctrine:migrations:migrate`); the package ships no migration. `urssaf:cesu:check` reports the missing tables.
+
 ### Added
 
 - Project skeleton: Docker tooling, quality gates (`make ci`) and GitHub Actions CI, identical to the other URSSAF

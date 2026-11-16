@@ -17,6 +17,8 @@ configuration tree.
 To try a recipe change before it is published, or to serve it from your own endpoint, `bin/build-flex-endpoint
 <output-dir> <base-url>` builds a Flex endpoint (`index.json` and one JSON file per recipe) to serve over HTTPS at
 `<base-url>` and declare in `extra.symfony.endpoint` of the application (`["<base-url>/index.json", "flex://defaults"]`).
+The recipe of version 0.1 is in `recipe/thebeardedbear/urssaf-tierce-declaration-cesu/0.1/`; it is prepared for
+symfony/recipes-contrib and not published there yet.
 
 ## Configuration reference
 

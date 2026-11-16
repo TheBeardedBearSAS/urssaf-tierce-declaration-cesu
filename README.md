@@ -20,10 +20,9 @@ Developed and maintained by [The Bearded Bear](https://the-bearded-bear.com).
 > process; the URSSAF documentation remains the authority on the API, and you remain responsible for the data your
 > application sends to URSSAF.
 
-**Status: implemented, not released on Packagist yet.** The nine operations, the workflow, the standalone builder, the
+**Status: 0.1.0 released; sandbox contract run still to do (see [docs/roadmap.md](docs/roadmap.md)).** The nine operations, the workflow, the standalone builder, the
 Symfony bundle and the Doctrine bridge are in place; the sandbox contract run that settles the open points of the API
-reference is still to do. See [docs/roadmap.md](docs/roadmap.md) and the architecture decision records in
-[docs/adr/](docs/adr/).
+reference is still to do. See the architecture decision records in [docs/adr/](docs/adr/).
 
 ## Scope
 
@@ -56,6 +55,27 @@ OAuth2 client credentials, scope `tiersdecl.cesu`, base URL `https://api.urssaf.
 - [docs/openapi/](docs/openapi/) — official OpenAPI contract(s) from the URSSAF API portal.
 - `docs/reference/` — official URSSAF documentation: not versioned (URSSAF documents), download it from the links in [docs/api-reference.md](docs/api-reference.md) into this local, git-ignored folder.
 - Catalogue page: https://portailapi.urssaf.fr/fr/catalogue-api/prd/td-cesu
+
+## Installation
+
+```bash
+composer require thebeardedbear/urssaf-tierce-declaration-cesu
+```
+
+With Symfony Flex, the recipe of the package registers the bundle, copies a commented
+`config/packages/urssaf_tierce_declaration_cesu.yaml` (the simulated URSSAF platform in the `test` environment) and adds
+`URSSAF_CESU_ENV`, `URSSAF_CESU_CLIENT_ID` and `URSSAF_CESU_CLIENT_SECRET` to `.env`. The recipe is prepared for
+[symfony/recipes-contrib](https://github.com/symfony/recipes-contrib) but not published there yet: it will be submitted
+there. Until then, do these steps by hand (Quick start B below), or serve the recipe from your own Flex endpoint built by
+`bin/build-flex-endpoint` (see [docs/symfony.md](docs/symfony.md#symfony-flex-recipe)).
+
+Then generate the tables of the package (it ships no migration, see [docs/doctrine.md](docs/doctrine.md#migrations))
+and check the installation:
+
+```bash
+php bin/console doctrine:migrations:diff --em=urssaf_cesu && php bin/console doctrine:migrations:migrate
+php bin/console urssaf:cesu:check
+```
 
 ## Architecture
 
@@ -140,13 +160,14 @@ integration with the simulator ([docs/testing.md](docs/testing.md)).
 
 ## Quick start B: Symfony
 
-With Symfony Flex, the recipe registers the bundle, copies the configuration and adds the variables to `.env`:
+Once the recipe is published in symfony/recipes-contrib, Symfony Flex will register the bundle, copy the configuration
+and add the variables to `.env`:
 
 ```sh
 composer require thebeardedbear/urssaf-tierce-declaration-cesu
 ```
 
-Without the recipe (or before it is published), do it by hand. Register the bundle in `config/bundles.php`:
+Without the recipe (not published yet), do it by hand. Register the bundle in `config/bundles.php`:
 
 ```php
 return [

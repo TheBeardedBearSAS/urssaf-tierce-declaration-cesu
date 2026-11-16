@@ -4,7 +4,7 @@ Specification: [api-reference.md](api-reference.md). Decisions: [adr/](adr/READM
 quality gates are the same as in `thebeardedbear/urssaf-tiers-prestations` (hexagonal layers enforced by Deptrac,
 PSR-only runtime, Symfony and Doctrine bridges, 100 % coverage and MSI).
 
-Status: **implemented, not released on Packagist yet.** The sandbox contract run that settles the open points of
+Status: **0.1.0 released on Packagist.** The sandbox contract run that settles the open points of
 api-reference §5 has not been done.
 
 ## Skeleton: done
@@ -88,8 +88,11 @@ api-reference §5 has not been done.
    against the URSSAF sandbox, then settle the **Open** points of api-reference §5 from the report, turning each
    assumption into a decision (ADR) or a code change (for instance `agreement_encoding`, the token host, the
    `etatCesuPlus` spellings).
-2. **Packagist release**: first tag, `SpecVersion` check, release notes from the changelog.
-3. **Recipe submission** to `symfony/recipes-contrib`.
+2. **Recipe submission** to `symfony/recipes-contrib` (directory `recipe/thebeardedbear/urssaf-tierce-declaration-cesu/0.1/`).
+
+## Released
+
+- **0.1.0** (2026-11-16): first release, tagged `v0.1.0`; the package is registered on Packagist by the maintainer.
 
 ## Out of scope
 
