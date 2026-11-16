@@ -10,6 +10,7 @@ use TheBeardedBear\UrssafTierceDeclarationCesu\Contract\Event\DeclarationAlready
 use TheBeardedBear\UrssafTierceDeclarationCesu\Contract\Event\DeclarationDeclared;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Contract\Event\DeclarationOutcomeUnknown;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Contract\Event\DeclarationRejected;
+use TheBeardedBear\UrssafTierceDeclarationCesu\Contract\Event\EmployerForgotten;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Contract\Event\EmployerRegistered;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Contract\Event\EmployerStatusChanged;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Contract\Event\IntegrationEvent;
@@ -62,6 +63,11 @@ final class IntegrationEventsTest extends TestCase
                 'sepaMandateState' => 'inactif',
             ],
         ];
+        yield 'employer forgotten' => [
+            new EmployerForgotten('event-1', '2026-11-15T10:00:00Z', 'tenant-1', 'aggregate-1', 'reference-1', 'Z0003752390009', ['mandate-1', 'mandate-2'], ['record-1']),
+            'urssaf.cesu.employer.forgotten',
+            ['cesuNumber' => 'Z0003752390009', 'mandateIds' => ['mandate-1', 'mandate-2'], 'declarationRecordIds' => ['record-1']],
+        ];
         yield 'mandate notified' => [
             new MandateNotified('event-1', '2026-11-15T10:00:00Z', 'tenant-1', 'aggregate-1', 'reference-1', 'Z0003752390009'),
             'urssaf.cesu.mandate.notified',
@@ -106,6 +112,6 @@ final class IntegrationEventsTest extends TestCase
             $types[] = $event->type();
         }
 
-        static::assertCount(9, array_unique($types));
+        static::assertCount(10, array_unique($types));
     }
 }

@@ -17,3 +17,4 @@
 | [0012](0012-integration-events.md) | Public integration events |
 | [0013](0013-symfony-bridge.md) | Symfony bridge |
 | [0014](0014-doctrine-bridge.md) | Doctrine bridge |
+| [0015](0015-employer-erasure.md) | Employer erasure (GDPR) |

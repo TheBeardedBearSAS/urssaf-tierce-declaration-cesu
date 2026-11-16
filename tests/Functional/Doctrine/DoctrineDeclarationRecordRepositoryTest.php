@@ -259,6 +259,25 @@ final class DoctrineDeclarationRecordRepositoryTest extends TestCase
         static::assertSame(DeclarationState::Rejected, $this->repository->get(DeclarationRecordId::fromString('record-1'))->state());
     }
 
+    public function testADeleteByEmployerInsideATransactionThatThenFailsKeepsTheRecords(): void
+    {
+        $this->repository->save(ContractSamples::recordOfEmployer(1, 1, DeclarationState::Declared));
+        $this->repository->save(ContractSamples::recordOfEmployer(1, 2, DeclarationState::Pending));
+
+        try {
+            $this->transactions()->transactional(function (): never {
+                $this->repository->deleteByEmployer(ContractSamples::tenant(), ContractSamples::cesuNumber(1), [DeclarationState::Declared, DeclarationState::Pending]);
+
+                throw new LogicException('boom');
+            });
+        } catch (LogicException) {
+            static::addToAssertionCount(1);
+        }
+
+        static::assertEqualsCanonicalizing(['record-1', 'record-2'], $this->entityManager->getConnection()->fetchFirstColumn('SELECT id FROM urssaf_cesu_declaration_records'));
+        static::assertSame(DeclarationState::Declared, $this->repository->get(DeclarationRecordId::fromString('record-1'))->state());
+    }
+
     public function testASaveOfACopyReadBeforeAnotherProcessClaimedTheRecordIsRefused(): void
     {
         $this->file = new FileDatabase();

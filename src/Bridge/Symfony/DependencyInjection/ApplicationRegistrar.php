@@ -14,6 +14,7 @@ use TheBeardedBear\UrssafTierceDeclarationCesu\Application\Command\ActivateAiciH
 use TheBeardedBear\UrssafTierceDeclarationCesu\Application\Command\ActivateCesuPlusHandler;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Application\Command\CancelMandateHandler;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Application\Command\DeclareSalaryHandler;
+use TheBeardedBear\UrssafTierceDeclarationCesu\Application\Command\ForgetEmployerHandler;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Application\Command\ImportEmployerHandler;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Application\Command\ReconcileStaleDeclarationsHandler;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Application\Command\RegisterEmployerHandler;
@@ -56,6 +57,7 @@ final readonly class ApplicationRegistrar
         ImportEmployerHandler::class,
         RegisterMandateHandler::class,
         CancelMandateHandler::class,
+        ForgetEmployerHandler::class,
         SyncEmployerStatusHandler::class,
         SyncEmployerStatusesHandler::class,
         SyncAllEmployerStatusesHandler::class,
@@ -102,7 +104,9 @@ final readonly class ApplicationRegistrar
             $workflow['allow_foster_carer_declarations'],
             $workflow['default_page_size'],
             $workflow['max_page_size'],
-        ]);
+        ])
+            ->arg('$allowErasureWithUnknownOutcomes', $workflow['erasure']['allow_unknown_outcomes'])
+            ->arg('$allowErasureWithActiveMandate', $workflow['erasure']['allow_active_mandate']);
         $this->services->set(FailureReporter::class, PsrLoggerFailureReporter::class)
             ->args([new Reference('logger', ContainerInterface::IGNORE_ON_INVALID_REFERENCE)])
             ->tag(self::LOGGER_TAG, ['channel' => self::LOGGER_CHANNEL]);

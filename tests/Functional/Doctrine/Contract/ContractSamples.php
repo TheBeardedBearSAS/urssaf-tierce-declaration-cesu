@@ -4,12 +4,15 @@ declare(strict_types=1);
 
 namespace TheBeardedBear\UrssafTierceDeclarationCesu\Tests\Functional\Doctrine\Contract;
 
+use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Declaration\DeclarationContent;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Declaration\DeclarationId;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Declaration\DeclarationRecord;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Declaration\DeclarationRecordId;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Declaration\DeclarationResult;
+use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Declaration\DeclarationSnapshot;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Declaration\DeclarationState;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Declaration\OutcomeUnknownReason;
+use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Declaration\StandardDeclaration;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Declaration\SubmissionError;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Employer\Employer;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Employer\EmployerAccount;
@@ -211,15 +214,44 @@ final class ContractSamples
     /**
      * The record "record-N" of the external reference "declaration-<reference>" just recorded at $at.
      */
-    public static function pendingRecordOfReference(int $reference, int $number, string $tenant = self::TENANT, string $at = self::AT): DeclarationRecord
+    public static function pendingRecordOfReference(int $reference, int $number, string $tenant = self::TENANT, string $at = self::AT, int $employer = 1): DeclarationRecord
     {
         return DeclarationRecord::record(
             DeclarationRecordId::fromString('record-' . $number),
             self::tenant($tenant),
             ExternalReference::fromString('declaration-' . $reference),
-            DeclarationSamples::snapshot(),
+            self::snapshotOfEmployer($employer),
             self::at($at),
         );
+    }
+
+    /**
+     * The sample snapshot declared by employer($employer) (employer 1: the default sample snapshot).
+     */
+    public static function snapshotOfEmployer(int $employer): DeclarationSnapshot
+    {
+        $content = DeclarationSamples::content();
+
+        return DeclarationSnapshot::fromDeclaration(StandardDeclaration::of(new DeclarationContent(
+            self::cesuNumber($employer),
+            $content->employmentPeriod(),
+            $content->paymentDate(),
+            $content->employee(),
+            $content->hourlyIncome(),
+            $content->fosterCarerIncome(),
+            $content->deposit(),
+            $content->approval(),
+            $content->activityNature(),
+        )));
+    }
+
+    /**
+     * The record "record-N" (reference "declaration-N") of employer($employer), driven to the state, like
+     * {@see self::record()}.
+     */
+    public static function recordOfEmployer(int $employer, int $number, DeclarationState $state, string $tenant = self::TENANT, string $at = self::AT): DeclarationRecord
+    {
+        return self::recordOfReference($number, $number, $state, 1, $tenant, $at, $employer);
     }
 
     /**
@@ -249,8 +281,9 @@ final class ContractSamples
         int $attempts = 1,
         string $tenant = self::TENANT,
         string $at = self::AT,
+        int $employer = 1,
     ): DeclarationRecord {
-        $record = self::pendingRecordOfReference($reference, $number, $tenant, $at);
+        $record = self::pendingRecordOfReference($reference, $number, $tenant, $at, $employer);
         $now = self::at($at);
         if ($state !== DeclarationState::Pending) {
             for ($attempt = 1; $attempt <= $attempts; ++$attempt) {

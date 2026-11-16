@@ -186,4 +186,43 @@ trait MandateRepositoryContract
         static::assertSame(['mandate-4'], self::mandateIds($this->repository->findByEmployer(ContractSamples::tenant(ContractSamples::OTHER_TENANT), ContractSamples::cesuNumber(1))));
         static::assertSame([], $this->repository->findByEmployer($tenant, ContractSamples::cesuNumber(3)));
     }
+
+    public function testADeletedMandateIsGoneAndDeletingAMissingOneIsANoOp(): void
+    {
+        $this->repository->save(ContractSamples::mandate(1));
+        $id = MandateId::fromString('mandate-1');
+        $this->repository->get($id);
+
+        $this->repository->delete($id);
+        $this->repository->delete(MandateId::fromString('missing'));
+
+        static::assertSame([], $this->repository->findByEmployer(ContractSamples::tenant(), ContractSamples::cesuNumber(1)));
+        $this->expectException(RecordNotFound::class);
+        $this->repository->get($id);
+    }
+
+    public function testDeletingTheActiveMandateLetsTheEmployerHoldANewActiveMandate(): void
+    {
+        $this->repository->save(ContractSamples::mandateOfEmployer(1, 1, MandateState::Confirmed));
+
+        $this->repository->delete(MandateId::fromString('mandate-1'));
+        $this->repository->save(ContractSamples::mandateOfEmployer(1, 2, MandateState::Notified, ContractSamples::TENANT, '2026-11-12T09:00:00Z'));
+
+        static::assertSame('mandate-2', $this->repository->findActive(ContractSamples::tenant(), ContractSamples::cesuNumber(1))?->id()->value());
+    }
+
+    public function testDeletingAMandateKeepsTheOtherMandates(): void
+    {
+        $this->repository->save(ContractSamples::mandateOfEmployer(1, 1, MandateState::Cancelled));
+        $this->repository->save(ContractSamples::mandateOfEmployer(1, 2, MandateState::Notified, ContractSamples::TENANT, '2026-11-12T09:00:00Z'));
+        $this->repository->save(ContractSamples::mandateOfEmployer(2, 3, MandateState::Notified));
+        $this->repository->save(ContractSamples::mandateOfEmployer(1, 4, MandateState::Notified, ContractSamples::OTHER_TENANT));
+
+        $this->repository->delete(MandateId::fromString('mandate-1'));
+
+        static::assertSame(['mandate-2'], self::mandateIds($this->repository->findByEmployer(ContractSamples::tenant(), ContractSamples::cesuNumber(1))));
+        static::assertSame(['mandate-3'], self::mandateIds($this->repository->findByEmployer(ContractSamples::tenant(), ContractSamples::cesuNumber(2))));
+        static::assertSame(['mandate-4'], self::mandateIds($this->repository->findByEmployer(ContractSamples::tenant(ContractSamples::OTHER_TENANT), ContractSamples::cesuNumber(1))));
+        static::assertSame('mandate-2', $this->repository->findActive(ContractSamples::tenant(), ContractSamples::cesuNumber(1))?->id()->value());
+    }
 }

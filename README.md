@@ -2,7 +2,6 @@
 
 <!-- the-bearded-bear:badges:start -->
 [![CI](https://github.com/TheBeardedBearSAS/urssaf-tierce-declaration-cesu/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/TheBeardedBearSAS/urssaf-tierce-declaration-cesu/actions/workflows/ci.yml?query=branch%3Amain) [![Coverage](https://codecov.io/gh/TheBeardedBearSAS/urssaf-tierce-declaration-cesu/branch/main/graph/badge.svg)](https://app.codecov.io/gh/TheBeardedBearSAS/urssaf-tierce-declaration-cesu) [![Mutation score](https://img.shields.io/endpoint?style=flat&url=https%3A%2F%2Fbadge-api.stryker-mutator.io%2Fgithub.com%2FTheBeardedBearSAS%2Furssaf-tierce-declaration-cesu%2Fmain)](https://dashboard.stryker-mutator.io/reports/github.com/TheBeardedBearSAS/urssaf-tierce-declaration-cesu/main) [![Quality Gate](https://sonarcloud.io/api/project_badges/measure?project=TheBeardedBearSAS_urssaf-tierce-declaration-cesu&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=TheBeardedBearSAS_urssaf-tierce-declaration-cesu) [![Maintainability](https://sonarcloud.io/api/project_badges/measure?project=TheBeardedBearSAS_urssaf-tierce-declaration-cesu&metric=sqale_rating)](https://sonarcloud.io/summary/overall?id=TheBeardedBearSAS_urssaf-tierce-declaration-cesu) [![Reliability](https://sonarcloud.io/api/project_badges/measure?project=TheBeardedBearSAS_urssaf-tierce-declaration-cesu&metric=reliability_rating)](https://sonarcloud.io/summary/overall?id=TheBeardedBearSAS_urssaf-tierce-declaration-cesu) [![Security](https://sonarcloud.io/api/project_badges/measure?project=TheBeardedBearSAS_urssaf-tierce-declaration-cesu&metric=security_rating)](https://sonarcloud.io/summary/overall?id=TheBeardedBearSAS_urssaf-tierce-declaration-cesu) [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/TheBeardedBearSAS/urssaf-tierce-declaration-cesu/badge)](https://scorecard.dev/viewer/?uri=github.com/TheBeardedBearSAS/urssaf-tierce-declaration-cesu)
-[![CI](https://github.com/TheBeardedBearSAS/urssaf-tierce-declaration-cesu/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/TheBeardedBearSAS/urssaf-tierce-declaration-cesu/actions/workflows/ci.yml?query=branch%3Amain) [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/TheBeardedBearSAS/urssaf-tierce-declaration-cesu/badge)](https://scorecard.dev/viewer/?uri=github.com/TheBeardedBearSAS/urssaf-tierce-declaration-cesu)
 [![PHPStan level max](https://img.shields.io/badge/PHPStan-level%20max-brightgreen)](phpstan.neon.dist) [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 <!-- the-bearded-bear:badges:end -->
 
@@ -47,7 +46,7 @@ OAuth2 client credentials, scope `tiersdecl.cesu`, base URL `https://api.urssaf.
 
 - [docs/api-reference.md](docs/api-reference.md) — technical reference (single source of truth for the package).
 - [docs/roadmap.md](docs/roadmap.md) — implementation status and what remains.
-- [docs/workflow.md](docs/workflow.md) — employer, mandate and declaration lifecycles, idempotency, retries, monitoring.
+- [docs/workflow.md](docs/workflow.md) — employer, mandate and declaration lifecycles, idempotency, retries, monitoring, GDPR erasure.
 - [docs/integration-events.md](docs/integration-events.md) — public integration events (`urssaf.cesu.*`) and the outbox.
 - [docs/doctrine.md](docs/doctrine.md) — Doctrine persistence: tables, dedicated entity manager, concurrency, personal data and encryption, migrations.
 - [docs/standalone.md](docs/standalone.md) — wiring without the Symfony bundle: builder options, scheduling, manual wiring.
@@ -135,7 +134,7 @@ $submission = $urssaf->declareSalary()(new DeclareSalary($tenant, ExternalRefere
 ```
 
 The other use cases are one accessor away: `verifyEmployer()`, `verifyEmployee()`, `syncEmployerStatus()`,
-`estimateContributions()`, `activateCesuPlus()`, `activateAici()`, `getEmployerAccount()`, `findDeclarations()`... Every
+`estimateContributions()`, `activateCesuPlus()`, `activateAici()`, `getEmployerAccount()`, `findDeclarations()`, `forgetEmployer()` (GDPR erasure)... Every
 option of the builder and the manual wiring are described in [docs/standalone.md](docs/standalone.md); test your
 integration with the simulator ([docs/testing.md](docs/testing.md)).
 

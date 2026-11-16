@@ -9,6 +9,7 @@ use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Declaration\DeclarationRec
 use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Declaration\DeclarationRecordId;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Declaration\DeclarationRecordRepository;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Declaration\DeclarationState;
+use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Shared\CesuNumber;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Shared\ExternalReference;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Shared\Instant;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Shared\TenantId;
@@ -115,5 +116,23 @@ final class JournalingDeclarationRecords implements DeclarationRecordRepository
     {
         $this->journal->add('delete:' . $id->value());
         $this->inner->delete($id);
+    }
+
+    public function countByEmployer(TenantId $tenantId, CesuNumber $employerCesuNumber): array
+    {
+        return $this->inner->countByEmployer($tenantId, $employerCesuNumber);
+    }
+
+    /**
+     * Journals "delete-by-employer:<cesu number>:<states>": the states are in the entry so that a test proves which ones
+     * were erasable.
+     */
+    public function deleteByEmployer(TenantId $tenantId, CesuNumber $employerCesuNumber, array $states): array
+    {
+        $this->journal->add(
+            'delete-by-employer:' . $employerCesuNumber->value() . ':' . implode(',', array_map(static fn(DeclarationState $state): string => $state->value, $states)),
+        );
+
+        return $this->inner->deleteByEmployer($tenantId, $employerCesuNumber, $states);
     }
 }

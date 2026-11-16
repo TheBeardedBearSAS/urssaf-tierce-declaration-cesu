@@ -19,6 +19,7 @@ use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Declaration\OutcomeUnknown
 use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Declaration\SubmissionError;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Employer\EmployerAccountId;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Employer\EmployerStage;
+use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Employer\Event\EmployerForgotten;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Employer\Event\EmployerRegistered;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Employer\Event\EmployerStageChanged;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Employer\Event\EmployerStatusRefreshed;
@@ -80,6 +81,19 @@ final class DomainEventSamples
             self::cesu(),
             EmployerStage::Registered,
             EmployerStage::MandateNotified,
+            self::at(),
+        );
+    }
+
+    public static function employerForgotten(): EmployerForgotten
+    {
+        return new EmployerForgotten(
+            self::accountId(),
+            self::tenant(),
+            self::reference('employer-1'),
+            self::cesu(),
+            [self::mandateId()],
+            [self::recordId()],
             self::at(),
         );
     }

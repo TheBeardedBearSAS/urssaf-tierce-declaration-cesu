@@ -17,7 +17,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Specification and documentation: official OpenAPI contracts (`docs/openapi/`), technical reference
   (`docs/api-reference.md`, links to the official documentation, local copy in the git-ignored `docs/reference/`),
   roadmap, architecture decision records (`docs/adr/`: the inherited architecture, ADR 0000, and the CESU-specific
-  decisions, ADR 0001 to 0014), `docs/workflow.md`, `docs/integration-events.md`, `docs/standalone.md`,
+  decisions, ADR 0001 to 0015), `docs/workflow.md`, `docs/integration-events.md`, `docs/standalone.md`,
   `docs/symfony.md`, `docs/doctrine.md` and `docs/testing.md`.
 - Domain layer (`src/Domain`): shared value objects (tenant, external reference, calendar date, instant, money in cents,
   half-days, e-mail, phone, country code, Cesu number), exception hierarchy and validation notification pattern;
@@ -60,9 +60,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Sandbox contract tests (`tests/Contract`, `make test-contract`, manual CI job `contract`): read-only checks and
   opt-in writes (`URSSAF_SANDBOX_ALLOW_WRITES=1`), a redacted observation report (`var/contract/sandbox-report.json`)
   for the open points of api-reference §5, optional `URSSAF_SANDBOX_TOKEN_URI`.
+- GDPR employer erasure (ADR 0015): `ForgetEmployer` / `ForgetEmployerHandler` erase an employer account, its mandates
+  and its declaration records from the local store in one transaction (`EmployerErasure` lists the erased ids), refuse
+  the erasures that would break the workflow guarantees with `EmployerErasureRefused` (submission in flight, unknown
+  outcome, active mandate; the two opt-ins default to `WorkflowPolicy`, `workflow.erasure.allow_unknown_outcomes` and
+  `workflow.erasure.allow_active_mandate` in the Symfony bundle), record the integration event
+  `urssaf.cesu.employer.forgotten` and never call URSSAF. Standalone accessor `forgetEmployer()` and console command
+  `urssaf:cesu:employer:forget`.
 
 ### Changed
 
+- Custom repositories (`custom` persistence driver) must implement `MandateRepository::delete()`,
+  `DeclarationRecordRepository::countByEmployer()` and `DeclarationRecordRepository::deleteByEmployer()`.
 - CI: verifiable quality proofs (Codecov, Stryker Dashboard, SonarQube Cloud, OpenSSF Scorecard; active once the
   repository is public), every GitHub Action pinned to a commit SHA and kept up to date by Dependabot, hadolint on the
   Dockerfile (`make hadolint`, part of `make ci`) with a non-root development image, and benchmarks with PHPBench

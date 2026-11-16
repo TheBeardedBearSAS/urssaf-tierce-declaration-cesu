@@ -16,6 +16,7 @@ final class IntegrationEventCodec
     public const CLASSES = [
         EmployerRegistered::class,
         EmployerStatusChanged::class,
+        EmployerForgotten::class,
         MandateNotified::class,
         MandateConfirmed::class,
         MandateCancelled::class,

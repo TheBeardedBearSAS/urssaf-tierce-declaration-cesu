@@ -9,6 +9,7 @@ use TheBeardedBear\UrssafTierceDeclarationCesu\Application\Command\ActivateAiciH
 use TheBeardedBear\UrssafTierceDeclarationCesu\Application\Command\ActivateCesuPlusHandler;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Application\Command\CancelMandateHandler;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Application\Command\DeclareSalaryHandler;
+use TheBeardedBear\UrssafTierceDeclarationCesu\Application\Command\ForgetEmployerHandler;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Application\Command\ImportEmployerHandler;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Application\Command\PurgeOutboxHandler;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Application\Command\ReconcileStaleDeclarationsHandler;
@@ -96,6 +97,11 @@ final readonly class UrssafTierceDeclarationCesu
     public function cancelMandate(): CancelMandateHandler
     {
         return new CancelMandateHandler($this->employerLocator(), $this->mandates, $this->accounts, $this->gateway, $this->clock, $this->unitOfWork);
+    }
+
+    public function forgetEmployer(): ForgetEmployerHandler
+    {
+        return new ForgetEmployerHandler($this->employerLocator(), $this->accounts, $this->mandates, $this->declarations, $this->clock, $this->unitOfWork, $this->policy);
     }
 
     public function syncEmployerStatus(): SyncEmployerStatusHandler

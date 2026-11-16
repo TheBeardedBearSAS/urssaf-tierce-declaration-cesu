@@ -4,12 +4,16 @@ declare(strict_types=1);
 
 namespace TheBeardedBear\UrssafTierceDeclarationCesu\Application\Service;
 
+use TheBeardedBear\UrssafTierceDeclarationCesu\Contract\Event\EmployerForgotten;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Contract\Event\EmployerRegistered;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Contract\Event\EmployerStatusChanged;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Contract\Event\IntegrationEvent;
+use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Declaration\DeclarationRecordId;
+use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Employer\Event\EmployerForgotten as DomainEmployerForgotten;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Employer\Event\EmployerRegistered as DomainEmployerRegistered;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Employer\Event\EmployerStageChanged;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Employer\Event\EmployerStatusRefreshed;
+use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Mandate\MandateId;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Shared\DomainEvent;
 
 /**
@@ -26,8 +30,26 @@ final class EmployerEventTranslator
             $event instanceof DomainEmployerRegistered => [self::registered($event)],
             $event instanceof EmployerStatusRefreshed => [self::statusRefreshed($event)],
             $event instanceof EmployerStageChanged => [self::stageChanged($event)],
+            $event instanceof DomainEmployerForgotten => [self::forgotten($event)],
             default => [],
         };
+    }
+
+    private static function forgotten(DomainEmployerForgotten $event): EmployerForgotten
+    {
+        $aggregateId = $event->accountId()->value();
+        $cesuNumber = $event->cesuNumber()->value();
+
+        return new EmployerForgotten(
+            IntegrationEventFacts::id(EmployerForgotten::TYPE, $aggregateId, $event->occurredAt(), [$cesuNumber]),
+            IntegrationEventFacts::instant($event->occurredAt()),
+            $event->tenantId()->value(),
+            $aggregateId,
+            $event->externalReference()->value(),
+            $cesuNumber,
+            array_map(static fn(MandateId $id): string => $id->value(), $event->mandateIds()),
+            array_map(static fn(DeclarationRecordId $id): string => $id->value(), $event->declarationRecordIds()),
+        );
     }
 
     private static function registered(DomainEmployerRegistered $event): EmployerRegistered

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Declaration;
 
 use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Exception\RecordNotFound;
+use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Shared\CesuNumber;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Shared\ExternalReference;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Shared\Instant;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Shared\TenantId;
@@ -12,6 +13,10 @@ use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Shared\TenantId;
 /**
  * Port: persistence of {@see DeclarationRecord}. Uniqueness expected: id; (tenant, external reference) (ADR 0006);
  * (tenant, declaration id) when set.
+ *
+ * One method per query or command of the use cases (lot 10 added the employer erasure pair), hence the method count.
+ *
+ * @mago-expect lint:too-many-methods
  */
 interface DeclarationRecordRepository
 {
@@ -76,4 +81,23 @@ interface DeclarationRecordRepository
      * GDPR erasure; nothing happens when the record does not exist.
      */
     public function delete(DeclarationRecordId $id): void;
+
+    /**
+     * Number of records of the employer per state (ForgetEmployer, lot 10 design §2.2): state value => count, every
+     * state present (0 when none), like {@see self::countByState()} restricted to the employer's Cesu number.
+     *
+     * @return array<string, int>
+     */
+    public function countByEmployer(TenantId $tenantId, CesuNumber $employerCesuNumber): array;
+
+    /**
+     * GDPR erasure (ForgetEmployer): deletes the records of the employer whose state is one of $states and returns
+     * their ids, oldest creation first (ties by id). A record whose state is not in $states is kept (a submission
+     * claimed concurrently survives: the caller re-counts with {@see self::countByEmployer()}). No event.
+     *
+     * @param non-empty-list<DeclarationState> $states
+     *
+     * @return list<DeclarationRecordId>
+     */
+    public function deleteByEmployer(TenantId $tenantId, CesuNumber $employerCesuNumber, array $states): array;
 }

@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace TheBeardedBear\UrssafTierceDeclarationCesu\Bridge\Doctrine\Repository;
 
+use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\OptimisticLockException;
 use Override;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Bridge\Doctrine\DoctrineTransactionManager;
+use TheBeardedBear\UrssafTierceDeclarationCesu\Bridge\Doctrine\Type\CesuNumberType;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Bridge\Doctrine\Type\DeclarationIdType;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Bridge\Doctrine\Type\DeclarationRecordIdType;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Bridge\Doctrine\Type\ExternalReferenceType;
@@ -21,6 +23,7 @@ use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Declaration\DeclarationRec
 use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Declaration\DeclarationState;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Exception\InvariantViolation;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Exception\RecordNotFound;
+use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Shared\CesuNumber;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Shared\ExternalReference;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Shared\Instant;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Shared\TenantId;
@@ -43,8 +46,11 @@ use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Shared\TenantId;
  * instance the stale reconciliation claimed or concluded it) is refused with
  * "declaration_record.concurrent_modification".
  *
- * Implements the repository port: one method per query of the port, plus the uniqueness and claim helpers.
+ * Implements the repository port: one method per query of the port, plus the uniqueness, claim and erasure helpers,
+ * hence the method count and complexity.
+ *
  * @mago-expect lint:too-many-methods
+ * @mago-expect lint:kan-defect
  */
 final readonly class DoctrineDeclarationRecordRepository implements DeclarationRecordRepository
 {
@@ -186,6 +192,55 @@ final readonly class DoctrineDeclarationRecordRepository implements DeclarationR
     public function delete(DeclarationRecordId $id): void
     {
         $this->discard($id);
+    }
+
+    #[Override]
+    public function countByEmployer(TenantId $tenantId, CesuNumber $employerCesuNumber): array
+    {
+        $counts = [];
+        foreach (DeclarationState::cases() as $state) {
+            $counts[$state->value] = 0;
+        }
+        /** @var list<array{state: DeclarationState, total: int}> $rows */
+        $rows = $this->entityManager
+            ->createQuery(
+                'SELECT r.status.state AS state, COUNT(r.id) AS total FROM ' . self::ENTITY . ' r'
+                . ' WHERE r.tenantId = :tenant AND r.snapshot.employerCesuNumber = :cesu GROUP BY r.status.state',
+            )
+            ->setParameter('tenant', $tenantId, TenantIdType::NAME)
+            ->setParameter('cesu', $employerCesuNumber, CesuNumberType::NAME)
+            ->getResult();
+        foreach ($rows as $row) {
+            $counts[$row['state']->value] = $row['total'];
+        }
+
+        return $counts;
+    }
+
+    #[Override]
+    public function deleteByEmployer(TenantId $tenantId, CesuNumber $employerCesuNumber, array $states): array
+    {
+        $values = array_map(static fn(DeclarationState $state): string => $state->value, $states);
+        $condition = ' r WHERE r.tenantId = :tenant AND r.snapshot.employerCesuNumber = :cesu AND r.status.state IN (:states)';
+        /** @var list<string> $selected */
+        $selected = $this->entityManager
+            ->createQuery('SELECT r.id FROM ' . self::ENTITY . $condition . ' ORDER BY r.createdAt ASC, r.id ASC')
+            ->setParameter('tenant', $tenantId, TenantIdType::NAME)
+            ->setParameter('cesu', $employerCesuNumber, CesuNumberType::NAME)
+            ->setParameter('states', $values, ArrayParameterType::STRING)
+            ->getSingleColumnResult();
+        $ids = array_map(DeclarationRecordId::fromString(...), $selected);
+        foreach ($ids as $id) {
+            $this->detach($id);
+        }
+        $this->entityManager
+            ->createQuery('DELETE FROM ' . self::ENTITY . $condition)
+            ->setParameter('tenant', $tenantId, TenantIdType::NAME)
+            ->setParameter('cesu', $employerCesuNumber, CesuNumberType::NAME)
+            ->setParameter('states', $values, ArrayParameterType::STRING)
+            ->execute();
+
+        return $ids;
     }
 
     #[Override]

@@ -2,8 +2,8 @@
 
 `TheBeardedBear\UrssafTierceDeclarationCesu\Standalone\UrssafTierceDeclarationCesuBuilder` builds every use case of the
 package from a PSR-18 transport (`HttpTransport`), a `CredentialsProvider` and the `ApiConfiguration`; `build()` returns
-`Standalone\UrssafTierceDeclarationCesu`, whose methods return the 22 handlers (`registerEmployer()`,
-`importEmployer()`, `registerMandate()`, `cancelMandate()`, `syncEmployerStatus()`, `syncEmployerStatuses()`,
+`Standalone\UrssafTierceDeclarationCesu`, whose methods return the 23 handlers (`registerEmployer()`,
+`importEmployer()`, `registerMandate()`, `cancelMandate()`, `forgetEmployer()`, `syncEmployerStatus()`, `syncEmployerStatuses()`,
 `syncAllEmployerStatuses()`, `activateCesuPlus()`, `activateAici()`, `declareSalary()`,
 `resolveDeclarationOutcome()`, `reconcileStaleDeclarations()`, `requeueAfterInvalidCredentials()`, `relayOutbox()`,
 `purgeOutbox()`, `verifyEmployer()`, `verifyEmployee()`, `getEmployerAccount()`, `estimateContributions()`,
@@ -28,7 +28,7 @@ Every `with...()` method returns a new builder:
 | `withEventPublisher(EventPublisher)` | none | Domain events after each commit, e.g. `new Psr14EventPublisher($dispatcher)`. |
 | `withLogger(LoggerInterface)` | none | Logs of the HTTP gateway and of the event publication failures (never personal data, [ADR 0007](adr/0007-personal-data.md)). |
 | `withRateLimiter(RateLimiter)` | `SlidingWindowRateLimiter` | The HTTP gateway enforces the URSSAF quota (2 500 calls per hour per tenant, [ADR 0011](adr/0011-quotas-and-rate-limit.md)) in the process; `NoopRateLimiter` disables it. |
-| `withPolicy(WorkflowPolicy)` | defaults | Page sizes, stale submission delay, attempts, business time zone, mandate guard... |
+| `withPolicy(WorkflowPolicy)` | defaults | Page sizes, stale submission delay, attempts, business time zone, mandate guard, defaults of the erasure opt-ins... |
 | `withDoctrine(EntityManagerInterface)` | in-memory repositories | Doctrine repositories, transaction manager and statistics on a **dedicated** entity manager ([doctrine.md](doctrine.md)); the outbox stays separate: `withOutbox(new DoctrineOutbox($entityManager), $sink)`. |
 | `withRepositories($accounts, $mandates, $declarations, $transactions, ?$statistics)` | in-memory | Your own persistence; without statistics `getWorkflowOverview()` throws. |
 | `withOutbox(Outbox, IntegrationEventSink)` | no outbox | Integration events (see [integration-events.md](integration-events.md)); `relayOutbox()` needs it. |

@@ -194,6 +194,48 @@ reconciled within `staleSubmissionAfter`). Employers and mandates have no failur
 The counts come from the `Application\Port\WorkflowStatistics` port. Requeued declarations, failed submissions and
 rejected credentials publish no integration event: list them with `FindDeclarations::inState()`.
 
+## Erasure (GDPR)
+
+`ForgetEmployer` (console: `urssaf:cesu:employer:forget`) erases an employer from the **local store** in one transaction
+([ADR 0015](adr/0015-employer-erasure.md)): its declaration records in the erasable states, every mandate (with its
+active-mandate key in the Doctrine bridge), then the account. It records `urssaf.cesu.employer.forgotten` (Cesu number,
+erased mandate ids and declaration record ids) and **never calls URSSAF**: the data and the mandate stay there. The
+package decides no retention rule (that is your policy, [ADR 0007](adr/0007-personal-data.md)); it only refuses the
+erasures that would break its own guarantees:
+
+| Found for the employer | Default | Opt-in |
+|---|---|---|
+| declaration `submitting` | refused (`employer_account.forget_submission_in_flight`) | none: wait for the outcome, then retry |
+| declaration `outcome_unknown` | refused (`employer_account.forget_unknown_outcome`) | `allowUnknownOutcomes` |
+| mandate `notified` or `confirmed` | refused (`employer_account.forget_active_mandate`) | `allowActiveMandate` |
+| declaration `pending`, `error`, `invalid_credentials`, `declared`, `rejected`, `already_declared`; mandate `cancelled` | erased | n/a |
+
+The two opt-ins default to `WorkflowPolicy::allowErasureWithUnknownOutcomes` / `allowErasureWithActiveMandate` (both
+false; `workflow.erasure.allow_unknown_outcomes` / `workflow.erasure.allow_active_mandate` in the Symfony bundle); the
+`ForgetEmployer` fields of the same names override the policy for one call (`null` uses the policy), and the console
+options `--allow-unknown-outcomes` / `--allow-active-mandate` set them to true. `--force` only skips the confirmation.
+When several refusals apply, the active mandate is reported first, then the submission in flight, then the unknown
+outcomes. Nothing is erased when a refusal is raised.
+
+The expected order is: settle the unknown outcomes (`ResolveDeclarationOutcome`), cancel the mandate (`CancelMandate`,
+method 031), then `ForgetEmployer`. Only mandates the package notified count: for an employer mandated outside the
+package, check the mandate at URSSAF yourself.
+
+Consequences to know before erasing:
+
+- the idempotency of `DeclareSalary` is lost for the erased external references (sending one again declares it again at
+  URSSAF);
+- the memory of the mandate guard ("a local mandate once existed", [ADR 0009](adr/0009-guards-and-opt-outs.md)) is reset:
+  a later import of the same employer with a confirmed stage passes the guard again;
+- URSSAF keeps its data and the mandate;
+- the outbox is left untouched: entries already dispatched are deleted by `PurgeOutbox` after `outbox.retention`,
+  pending ones stay until delivered (see [integration-events.md](integration-events.md#erasure));
+- employers that are not tracked (declarations sent with `skipMandateCheck` and no account) are not covered: delete their
+  records with `DeclarationRecordRepository::deleteByEmployer()` in your own transaction;
+- stop declaring for an employer before erasing it: a record created concurrently may be erased without being listed in
+  the event (nothing was sent for it);
+- an erased employer answers `employer_account.not_found`, also on a second run.
+
 ## Policy
 
 All values belong to `Application\Policy\WorkflowPolicy` (every constructor argument is optional):
@@ -206,6 +248,7 @@ All values belong to `Application\Policy\WorkflowPolicy` (every constructor argu
 | `requireLocalMandate` ([ADR 0009](adr/0009-guards-and-opt-outs.md)) | true |
 | `allowFosterCarerDeclarations` (`typeEmploi = AF`) | false |
 | `defaultPageSize` / `maxPageSize` | 100 / 1000 |
+| `allowErasureWithUnknownOutcomes` / `allowErasureWithActiveMandate` ([ADR 0015](adr/0015-employer-erasure.md)) | false / false |
 
 Respect the URSSAF quota (2 500 calls per hour, [ADR 0011](adr/0011-quotas-and-rate-limit.md)): use the sliding-window
 rate limiter and schedule the synchronisation at a reasonable frequency.
