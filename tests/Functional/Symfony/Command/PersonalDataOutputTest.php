@@ -62,6 +62,10 @@ final class PersonalDataOutputTest extends TestCase
         $resolve->execute(['--record-id' => $unknown->declaration->recordId, '--not-received' => true], $options);
         $displays[] = $resolve->getDisplay();
 
+        $forget = $harness->command('urssaf:cesu:employer:forget');
+        $forget->execute(['--employer' => Scenario::EMPLOYER, '--force' => true, '--allow-active-mandate' => true, '--allow-unknown-outcomes' => true], $options);
+        $displays[] = $forget->getDisplay();
+
         self::assertNothingPersonal(implode("\n", $displays) . $harness->privateService('logger', CapturingLogger::class)->dump());
     }
 

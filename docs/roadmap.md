@@ -73,16 +73,23 @@ api-reference §5 has not been done.
   (`URSSAF_SANDBOX_ALLOW_WRITES=1`), a redacted observation report (`var/contract/sandbox-report.json`) with one id per
   open point of api-reference §5. Skipped without credentials.
 
+## GDPR erasure: done
+
+- `ForgetEmployer` use case ([ADR 0015](adr/0015-employer-erasure.md)): the employer account, its mandates and its
+  declaration records in one transaction, refusals that protect the workflow (submission in flight, unknown outcome,
+  active mandate) with configurable opt-ins, nothing sent to URSSAF.
+- Ports: `MandateRepository::delete()`, `DeclarationRecordRepository::countByEmployer()` / `deleteByEmployer()`.
+- Integration event `urssaf.cesu.employer.forgotten`; console command `urssaf:cesu:employer:forget`; `forgetEmployer()`
+  accessor; [workflow.md](workflow.md#erasure-gdpr).
+
 ## Remaining
 
 1. **Sandbox contract run**: run `make test-contract` (with `URSSAF_SANDBOX_ALLOW_WRITES=1` for the write points)
    against the URSSAF sandbox, then settle the **Open** points of api-reference §5 from the report, turning each
    assumption into a decision (ADR) or a code change (for instance `agreement_encoding`, the token host, the
    `etatCesuPlus` spellings).
-2. **GDPR erasure use case `ForgetEmployer`**: deferred from the Symfony and Doctrine lots (ADR 0013 decision 14,
-   ADR 0014 decision 12): an Application use case, a `delete()` on the mandate port, then the console command.
-3. **Packagist release**: first tag, `SpecVersion` check, release notes from the changelog.
-4. **Recipe submission** to `symfony/recipes-contrib`.
+2. **Packagist release**: first tag, `SpecVersion` check, release notes from the changelog.
+3. **Recipe submission** to `symfony/recipes-contrib`.
 
 ## Out of scope
 

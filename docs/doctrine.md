@@ -166,12 +166,17 @@ gives you the tools, the policy is yours:
 
 1. **Retention.** Define how long an account, a mandate and a declaration record are kept after they are no longer
    needed, and run a scheduled job in your application that selects the expired records.
-2. **Erasure by deletion.** `EmployerAccountRepository::delete(EmployerAccountId)` and
-   `DeclarationRecordRepository::delete(DeclarationRecordId)` remove the row (no event, nothing happens when it does
-   not exist). The mandate repository has no `delete()` yet: the use case that erases an employer with its mandates
-   comes in a dedicated lot ([ADR 0013](adr/0013-symfony-bridge.md), deferred GDPR command). Until then, remove the
-   rows of `urssaf_cesu_mandates` and `urssaf_cesu_active_mandates` of the employer with your own SQL. Nothing is erased
-   at URSSAF: the data they hold is subject to their own retention rules.
+2. **Erasure by deletion.** The `ForgetEmployer` use case (and its console command `urssaf:cesu:employer:forget`)
+   erases a tracked employer, its mandates (and their `urssaf_cesu_active_mandates` key row, so that the employer can
+   hold a new active mandate afterwards) and its declaration records in one transaction, then records the
+   `urssaf.cesu.employer.forgotten` integration event ([ADR 0015](adr/0015-employer-erasure.md), the rules are in
+   [workflow.md](workflow.md#erasure-gdpr)). Nothing is erased at URSSAF: the data they hold is subject to their own
+   retention rules. For your own retention jobs, the repositories expose the building blocks: `delete()` on
+   `EmployerAccountRepository`, `MandateRepository` and `DeclarationRecordRepository` (one row, no event, nothing
+   happens when it does not exist), and `DeclarationRecordRepository::deleteByEmployer()` (the records of an employer
+   `(tenant, Cesu number)` in the given states, returning their ids) with `countByEmployer()`. The Doctrine bridge
+   deletes with an immediate DQL `DELETE` after detaching the managed copies. There is no index on
+   `urssaf_cesu_declaration_records (tenant_id, employer_cesu_number)`: add one in your migration if you erase often.
 3. **Encryption at rest.** The types are `final`: to encrypt a column, write a type of your own that wraps the package
    one and register it under the same name, after `DoctrineIntegration::registerTypes()`. Example for the employer
    birth date:

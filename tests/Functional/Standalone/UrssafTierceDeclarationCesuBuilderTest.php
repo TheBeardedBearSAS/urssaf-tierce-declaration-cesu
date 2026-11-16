@@ -19,6 +19,7 @@ use TheBeardedBear\UrssafTierceDeclarationCesu\Application\Command\ActivateAici;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Application\Command\ActivateCesuPlus;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Application\Command\CancelMandate;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Application\Command\DeclareSalary;
+use TheBeardedBear\UrssafTierceDeclarationCesu\Application\Command\ForgetEmployer;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Application\Command\ImportEmployer;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Application\Command\PurgeOutbox;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Application\Command\ReconcileStaleDeclarations;
@@ -34,6 +35,7 @@ use TheBeardedBear\UrssafTierceDeclarationCesu\Application\Dto\DeclarationSelect
 use TheBeardedBear\UrssafTierceDeclarationCesu\Application\Dto\DeclarationView;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Application\Dto\EmployerSelector;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Application\Dto\ItemOutcome;
+use TheBeardedBear\UrssafTierceDeclarationCesu\Application\Exception\EmployerErasureRefused;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Application\Exception\MandateRequired;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Application\Policy\WorkflowPolicy;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Application\Port\Credentials;
@@ -51,6 +53,7 @@ use TheBeardedBear\UrssafTierceDeclarationCesu\Bridge\Doctrine\Repository\Doctri
 use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Declaration\DeclarationState;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Declaration\Input\EmploymentPeriodDraft;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Employee\Input\EmployeeReferenceDraft;
+use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Exception\RecordNotFound;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Shared\ExternalReference;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Shared\TenantId;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Infrastructure\Credentials\InMemoryCredentialsProvider;
@@ -69,6 +72,7 @@ use TheBeardedBear\UrssafTierceDeclarationCesu\Standalone\UrssafTierceDeclaratio
 use TheBeardedBear\UrssafTierceDeclarationCesu\Standalone\UrssafTierceDeclarationCesuBuilder;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Testing\SimulatedCesuGateway;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Tests\Functional\Doctrine\Support\TestDatabase;
+use TheBeardedBear\UrssafTierceDeclarationCesu\Tests\Unit\Application\Fake\ErasurePolicies;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Tests\Unit\Application\Fake\FailingEventPublisher;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Tests\Unit\Application\Fake\FixedClock;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Tests\Unit\Application\Fake\RecordingIntegrationEventSink;
@@ -116,7 +120,7 @@ final class UrssafTierceDeclarationCesuBuilderTest extends TestCase
         sort($expected);
 
         static::assertSame($expected, $available);
-        static::assertCount(22, $available);
+        static::assertCount(23, $available);
     }
 
     public function testTheWholeWorkflowRunsWithTheSimulator(): void
@@ -314,6 +318,53 @@ final class UrssafTierceDeclarationCesuBuilderTest extends TestCase
         } catch (MandateRequired) {
             static::assertSame([], $strictGateway->calls());
         }
+    }
+
+    public function testAnImportedEmployerIsErasedWithoutAnyCallToUrssaf(): void
+    {
+        $urssaf = SimulatorSamples::mandatedGateway();
+        $package = self::builder()->withGateway($urssaf)->withClock(new FixedClock(self::NOW))->withIdGenerator(new SequentialIdGenerator())->withPolicy(ErasurePolicies::withoutMandateGuard())->build();
+        $tenant = TenantId::fromString('tenant-1');
+        $reference = ExternalReference::fromString('employer-1');
+        $package->importEmployer()(new ImportEmployer($tenant, $reference, EmployerSamples::employer()));
+        $package->declareSalary()(new DeclareSalary($tenant, ExternalReference::fromString('payslip-1'), DraftFixtures::valid()));
+        $calls = $urssaf->calls();
+
+        $erasure = $package->forgetEmployer()(new ForgetEmployer($tenant, EmployerSelector::byExternalReference($reference), null, null));
+
+        static::assertSame(['id-1'], [$erasure->accountId]);
+        static::assertSame([], $erasure->mandateIds);
+        static::assertSame(['id-2'], $erasure->declarationRecordIds);
+        static::assertSame($calls, $urssaf->calls());
+        static::assertSame([], $package->findDeclarations()(FindDeclarations::inState($tenant, DeclarationState::Declared, null)));
+        $this->expectException(RecordNotFound::class);
+        $package->getEmployerAccount()(new GetEmployerAccount($tenant, EmployerSelector::byExternalReference($reference)));
+    }
+
+    public function testTheErasureOptInsComeFromThePolicy(): void
+    {
+        $tenant = TenantId::fromString('tenant-1');
+        $reference = ExternalReference::fromString('employer-1');
+        $command = new ForgetEmployer($tenant, EmployerSelector::byExternalReference($reference), null, null);
+        $packages = [];
+        foreach ([ErasurePolicies::of(false, false), ErasurePolicies::of(false, true)] as $policy) {
+            $urssaf = new SimulatedCesuGateway();
+            $urssaf->knowEmployer(EmployerSamples::employer());
+            $package = self::builder()->withGateway($urssaf)->withClock(new FixedClock(self::NOW))->withPolicy($policy)->build();
+            $package->importEmployer()(new ImportEmployer($tenant, $reference, EmployerSamples::employer()));
+            $package->registerMandate()(new RegisterMandate($tenant, EmployerSelector::byExternalReference($reference)));
+            $packages[] = $package;
+        }
+        [$strict, $permissive] = $packages;
+
+        try {
+            $strict->forgetEmployer()($command);
+            static::fail('The active mandate must refuse the erasure.');
+        } catch (EmployerErasureRefused $refusal) {
+            static::assertSame('employer_account.forget_active_mandate', $refusal->violationCode());
+        }
+
+        static::assertCount(1, $permissive->forgetEmployer()($command)->mandateIds);
     }
 
     public function testTheHttpGatewayIsBuiltFromTheTransportAndItsOptions(): void

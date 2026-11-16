@@ -404,4 +404,92 @@ trait DeclarationRecordRepositoryContract
         static::assertSame(['record-2'], self::recordIds($this->repository->findByState(ContractSamples::tenant(), DeclarationState::Pending, 10)));
         static::assertSame([], $this->repository->findByState(ContractSamples::tenant(), DeclarationState::Rejected, 10));
     }
+
+    public function testCountByEmployerCountsEveryStateOfThatEmployerOnly(): void
+    {
+        $this->repository->save(ContractSamples::recordOfEmployer(2, 4, DeclarationState::Declared));
+        $this->repository->save(ContractSamples::recordOfEmployer(1, 5, DeclarationState::Declared, ContractSamples::OTHER_TENANT));
+        $this->repository->save(ContractSamples::recordOfEmployer(1, 1, DeclarationState::Declared));
+        $this->repository->save(ContractSamples::recordOfEmployer(1, 2, DeclarationState::Declared));
+        $this->repository->save(ContractSamples::recordOfEmployer(1, 3, DeclarationState::Error));
+
+        $counts = $this->repository->countByEmployer(ContractSamples::tenant(), ContractSamples::cesuNumber(1));
+
+        static::assertSame(
+            array_map(static fn(DeclarationState $state): string => $state->value, DeclarationState::cases()),
+            array_keys($counts),
+        );
+        static::assertSame(
+            ['pending' => 0, 'submitting' => 0, 'declared' => 2, 'rejected' => 0, 'already_declared' => 0, 'outcome_unknown' => 0, 'error' => 1, 'invalid_credentials' => 0],
+            $counts,
+        );
+        static::assertSame(0, array_sum($this->repository->countByEmployer(ContractSamples::tenant(), ContractSamples::cesuNumber(3))));
+        static::assertCount(\count(DeclarationState::cases()), $this->repository->countByEmployer(ContractSamples::tenant('tenant-9'), ContractSamples::cesuNumber(1)));
+    }
+
+    public function testDeleteByEmployerDeletesTheRecordsInTheGivenStatesAndReturnsTheirIdsOldestFirst(): void
+    {
+        $this->repository->save(ContractSamples::recordOfEmployer(1, 1, DeclarationState::Declared, ContractSamples::TENANT, '2026-11-12T09:00:00Z'));
+        $this->repository->save(ContractSamples::recordOfEmployer(1, 4, DeclarationState::Error, ContractSamples::TENANT, '2026-11-11T09:00:00Z'));
+        $this->repository->save(ContractSamples::recordOfEmployer(1, 3, DeclarationState::Pending, ContractSamples::TENANT, '2026-11-11T09:00:00Z'));
+        $this->repository->save(ContractSamples::recordOfEmployer(1, 2, DeclarationState::Rejected, ContractSamples::TENANT, '2026-11-10T09:00:00Z'));
+
+        $deleted = $this->repository->deleteByEmployer(
+            ContractSamples::tenant(),
+            ContractSamples::cesuNumber(1),
+            [DeclarationState::Declared, DeclarationState::Error, DeclarationState::Pending, DeclarationState::Rejected],
+        );
+
+        static::assertSame(['record-2', 'record-3', 'record-4', 'record-1'], array_map(static fn(DeclarationRecordId $id): string => $id->value(), $deleted));
+        static::assertSame(0, array_sum($this->repository->countByEmployer(ContractSamples::tenant(), ContractSamples::cesuNumber(1))));
+    }
+
+    public function testDeleteByEmployerKeepsTheRecordsInOtherStatesAndOfOtherEmployers(): void
+    {
+        $this->repository->save(ContractSamples::recordOfEmployer(1, 1, DeclarationState::Declared));
+        $this->repository->save(ContractSamples::recordOfEmployer(1, 2, DeclarationState::Submitting));
+        $this->repository->save(ContractSamples::recordOfEmployer(2, 3, DeclarationState::Declared));
+        $this->repository->save(ContractSamples::recordOfEmployer(1, 4, DeclarationState::Declared, ContractSamples::OTHER_TENANT));
+
+        $deleted = $this->repository->deleteByEmployer(ContractSamples::tenant(), ContractSamples::cesuNumber(1), [DeclarationState::Declared]);
+
+        static::assertSame(['record-1'], array_map(static fn(DeclarationRecordId $id): string => $id->value(), $deleted));
+        static::assertSame(DeclarationState::Submitting, $this->repository->get(DeclarationRecordId::fromString('record-2'))->state());
+        static::assertSame(DeclarationState::Declared, $this->repository->get(DeclarationRecordId::fromString('record-3'))->state());
+        static::assertSame(DeclarationState::Declared, $this->repository->get(DeclarationRecordId::fromString('record-4'))->state());
+        static::assertSame(1, $this->repository->countByEmployer(ContractSamples::tenant(), ContractSamples::cesuNumber(1))['submitting']);
+        static::assertSame(0, $this->repository->countByEmployer(ContractSamples::tenant(), ContractSamples::cesuNumber(1))['declared']);
+    }
+
+    public function testDeleteByEmployerWithoutMatchReturnsNothing(): void
+    {
+        $this->repository->save(ContractSamples::recordOfEmployer(1, 1, DeclarationState::Declared));
+
+        static::assertSame([], $this->repository->deleteByEmployer(ContractSamples::tenant(), ContractSamples::cesuNumber(2), [DeclarationState::Declared]));
+        static::assertSame([], $this->repository->deleteByEmployer(ContractSamples::tenant(), ContractSamples::cesuNumber(1), [DeclarationState::Error]));
+        static::assertSame('record-1', $this->repository->get(DeclarationRecordId::fromString('record-1'))->id()->value());
+    }
+
+    public function testADeletedByEmployerRecordIsNotFoundEvenIfItWasReadBefore(): void
+    {
+        $this->repository->save(ContractSamples::recordOfEmployer(1, 1, DeclarationState::Declared));
+        $id = DeclarationRecordId::fromString('record-1');
+        $this->repository->get($id);
+
+        $this->repository->deleteByEmployer(ContractSamples::tenant(), ContractSamples::cesuNumber(1), [DeclarationState::Declared]);
+
+        $this->expectException(RecordNotFound::class);
+        $this->repository->get($id);
+    }
+
+    public function testDeleteByEmployerFreesTheExternalReferenceAndTheDeclarationId(): void
+    {
+        $this->repository->save(ContractSamples::recordOfEmployer(1, 1, DeclarationState::Declared));
+
+        $this->repository->deleteByEmployer(ContractSamples::tenant(), ContractSamples::cesuNumber(1), [DeclarationState::Declared]);
+        $this->repository->save(ContractSamples::recordOfReference(1, 2, DeclarationState::Declared));
+
+        static::assertSame('record-2', $this->repository->findByExternalReference(ContractSamples::tenant(), ExternalReference::fromString('declaration-1'))?->id()->value());
+        static::assertSame('record-2', $this->repository->findByDeclarationId(ContractSamples::tenant(), ContractSamples::result(1)->declarationId())?->id()->value());
+    }
 }

@@ -70,6 +70,7 @@ final class BundleConfigurationTest extends TestCase
                     'allow_foster_carer_declarations' => false,
                     'default_page_size' => 100,
                     'max_page_size' => 1000,
+                    'erasure' => ['allow_unknown_outcomes' => false, 'allow_active_mandate' => false],
                 ],
                 'persistence' => [
                     'driver' => 'doctrine',

@@ -65,3 +65,6 @@ later, personal values on the command line).
   `mandate.duplicate_active`, `declaration_record.duplicate_*`) are translated like every other code.
 - **2026-11-15 (lead-accepted, clarification of decision 13).** `urssaf:cesu:employers:sync-status` with an employer
   selector requires `--tenant`: an employer is identified within a tenant (ADR 0010).
+- **2026-11-16 (lead-accepted, lot 10).** Decision 14 is done: `urssaf:cesu:employer:forget` erases an employer
+  ([ADR 0015](0015-employer-erasure.md)); the bundle gains `workflow.erasure.allow_unknown_outcomes` and
+  `workflow.erasure.allow_active_mandate` (both default `false`).

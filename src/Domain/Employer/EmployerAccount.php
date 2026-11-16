@@ -4,12 +4,15 @@ declare(strict_types=1);
 
 namespace TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Employer;
 
+use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Declaration\DeclarationRecordId;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Employee\EmployeeReference;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Employee\EmployeeReferenceKind;
+use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Employer\Event\EmployerForgotten;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Employer\Event\EmployerRegistered;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Employer\Event\EmployerStageChanged;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Employer\Event\EmployerStatusRefreshed;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Employer\Status\EmployerStatus;
+use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Mandate\MandateId;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Shared\CalendarDate;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Shared\CesuNumber;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Shared\DomainEvent;
@@ -222,6 +225,27 @@ class EmployerAccount
                 $now,
             );
         }
+    }
+
+    /**
+     * GDPR erasure (ForgetEmployer, ADR 0015): records {@see EmployerForgotten} with the ids erased with the account.
+     * The state is not changed: the caller deletes the account, its mandates and its declaration records in the same
+     * transaction, then releases the event.
+     *
+     * @param list<MandateId>           $mandateIds
+     * @param list<DeclarationRecordId> $declarationRecordIds
+     */
+    public function forget(Instant $now, array $mandateIds, array $declarationRecordIds): void
+    {
+        $this->events[] = new EmployerForgotten(
+            $this->id,
+            $this->tenantId,
+            $this->externalReference,
+            $this->cesuNumber(),
+            $mandateIds,
+            $declarationRecordIds,
+            $now,
+        );
     }
 
     /**

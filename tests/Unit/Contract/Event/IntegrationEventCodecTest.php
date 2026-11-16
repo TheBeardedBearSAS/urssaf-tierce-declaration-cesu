@@ -12,6 +12,7 @@ use TheBeardedBear\UrssafTierceDeclarationCesu\Contract\Event\DeclarationAlready
 use TheBeardedBear\UrssafTierceDeclarationCesu\Contract\Event\DeclarationDeclared;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Contract\Event\DeclarationOutcomeUnknown;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Contract\Event\DeclarationRejected;
+use TheBeardedBear\UrssafTierceDeclarationCesu\Contract\Event\EmployerForgotten;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Contract\Event\EmployerRegistered;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Contract\Event\EmployerStatusChanged;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Contract\Event\IntegrationEvent;
@@ -36,6 +37,7 @@ final class IntegrationEventCodecTest extends TestCase
     {
         yield 'employer registered' => [new EmployerRegistered('e', '2026-11-15T10:00:00Z', 't', 'a', 'r', 'Z0003752390009', 'registered')];
         yield 'employer status changed' => [new EmployerStatusChanged('e', '2026-11-15T10:00:00Z', 't', 'a', 'r', 'Z0003752390009', 'registered', 'mandate_notified', null, null, null, null)];
+        yield 'employer forgotten' => [new EmployerForgotten('e', '2026-11-15T10:00:00Z', 't', 'a', 'r', 'Z0003752390009', ['m1', 'm2'], ['r1'])];
         yield 'mandate notified' => [new MandateNotified('e', '2026-11-15T10:00:00Z', 't', 'a', 'r', 'Z0003752390009')];
         yield 'mandate confirmed' => [new MandateConfirmed('e', '2026-11-15T10:00:00Z', 't', 'a', 'r', 'Z0003752390009')];
         yield 'mandate cancelled' => [new MandateCancelled('e', '2026-11-15T10:00:00Z', 't', 'a', 'r', 'Z0003752390009')];

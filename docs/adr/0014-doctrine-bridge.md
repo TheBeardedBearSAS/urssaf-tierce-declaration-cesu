@@ -58,3 +58,9 @@ IBAN, NIR and employee names are not, ADR 0007).
 - Declaration result amounts and URSSAF error descriptions are stored (ADR 0007 clarification); encryption is a
   documented recipe.
 - Documented in `docs/doctrine.md`, `docs/symfony.md`, `docs/standalone.md` and `docs/workflow.md`.
+
+## Amendment (2026-11-16, lead-accepted, lot 10)
+
+- Decision 12 is done ([ADR 0015](0015-employer-erasure.md)): `MandateRepository::delete()` removes the mandate and its
+  `urssaf_cesu_active_mandates` key row, and `DeclarationRecordRepository::deleteByEmployer()` / `countByEmployer()`
+  serve `ForgetEmployer`. Counts and ids come from the selected ids, never from the affected-row count (decision 10).

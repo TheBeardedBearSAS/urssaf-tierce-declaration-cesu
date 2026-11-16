@@ -33,3 +33,9 @@ stored". The reference documents encryption at rest as a recipe (DBAL type overr
   retention is the host's policy, and the encryption recipe in `docs/doctrine.md` covers them.
 - The employer birth date has its own DBAL type (`urssaf_cesu_birth_date`) so that it can be encrypted alone.
 - Conversion errors on these columns never contain the stored value.
+
+## Amendment (2026-11-16, lead-accepted, lot 10)
+
+- The package offers an erasure use case, `ForgetEmployer`, and a console command, `urssaf:cesu:employer:forget`
+  ([ADR 0015](0015-employer-erasure.md)). It erases the local copy only; retention remains the host's policy and
+  nothing is erased at URSSAF.

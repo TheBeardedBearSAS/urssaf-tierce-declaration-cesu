@@ -6,7 +6,9 @@ namespace TheBeardedBear\UrssafTierceDeclarationCesu\Tests\Functional\Doctrine;
 
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\ORM\EntityManagerInterface;
+use LogicException;
 use PHPUnit\Framework\TestCase;
+use TheBeardedBear\UrssafTierceDeclarationCesu\Bridge\Doctrine\DoctrineTransactionManager;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Bridge\Doctrine\Repository\DoctrineMandateRepository;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Exception\InvariantViolation;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Mandate\MandateId;
@@ -99,6 +101,38 @@ final class DoctrineMandateRepositoryTest extends TestCase
         static::assertSame($notified, $confirmed);
         static::assertSame([], $cancelled);
         static::assertSame([['tenant_id' => 'tenant-1', 'cesu_number' => $cesuNumber, 'mandate_id' => 'mandate-2']], $renewed);
+    }
+
+    public function testDeletingAMandateRemovesItsKeyRowAndKeepsTheOthers(): void
+    {
+        $this->repository->save(ContractSamples::mandateOfEmployer(1, 1, MandateState::Notified));
+        $this->repository->save(ContractSamples::mandateOfEmployer(2, 2, MandateState::Confirmed));
+
+        $this->repository->delete(MandateId::fromString('mandate-1'));
+
+        static::assertSame(
+            [['tenant_id' => 'tenant-1', 'cesu_number' => ContractSamples::cesuNumber(2)->value(), 'mandate_id' => 'mandate-2']],
+            self::keys($this->entityManager),
+        );
+    }
+
+    public function testADeleteInsideATransactionThatThenFailsKeepsTheMandateAndItsKeyRow(): void
+    {
+        $this->repository->save(ContractSamples::mandate(1));
+        $keys = self::keys($this->entityManager);
+
+        try {
+            (new DoctrineTransactionManager($this->entityManager))->transactional(function (): never {
+                $this->repository->delete(MandateId::fromString('mandate-1'));
+
+                throw new LogicException('boom');
+            });
+        } catch (LogicException) {
+            static::addToAssertionCount(1);
+        }
+
+        static::assertSame($keys, self::keys($this->entityManager));
+        static::assertSame(['mandate-1'], $this->entityManager->getConnection()->fetchFirstColumn('SELECT id FROM urssaf_cesu_mandates'));
     }
 
     public function testAnUnmanagedMandateReplacesTheStoredRowAndRewritesTheKeyRow(): void

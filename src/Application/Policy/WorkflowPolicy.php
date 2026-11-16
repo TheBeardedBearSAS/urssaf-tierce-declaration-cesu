@@ -19,7 +19,9 @@ use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Shared\CalendarDate;
  * - maxSubmissionAttempts: submission attempts after which a technical failure is not requeued automatically;
  * - requireLocalMandate: whether a declaration needs a local mandate (ADR 0009: the mandate guard, unless a command opts out);
  * - allowFosterCarerDeclarations: whether declarations of foster carers (typeEmploi = AF) are accepted locally (ADR 0009);
- * - defaultPageSize / maxPageSize: number of records loaded by a batch use case when no / a larger limit is asked.
+ * - defaultPageSize / maxPageSize: number of records loaded by a batch use case when no / a larger limit is asked;
+ * - allowErasureWithUnknownOutcomes / allowErasureWithActiveMandate: default of the two opt-in refusals of ForgetEmployer
+ *   (a command states its own choice when it is not null; a submission in flight is always refused, ADR 0015).
  */
 final readonly class WorkflowPolicy
 {
@@ -49,6 +51,8 @@ final readonly class WorkflowPolicy
         private bool $allowFosterCarerDeclarations = false,
         int $defaultPageSize = self::DEFAULT_PAGE_SIZE,
         int $maxPageSize = self::MAX_PAGE_SIZE,
+        private bool $allowErasureWithUnknownOutcomes = false,
+        private bool $allowErasureWithActiveMandate = false,
     ) {
         if ($maxPageSize < $defaultPageSize) {
             throw InvariantViolation::because(
@@ -104,6 +108,22 @@ final readonly class WorkflowPolicy
     public function allowFosterCarerDeclarations(): bool
     {
         return $this->allowFosterCarerDeclarations;
+    }
+
+    /**
+     * ADR 0015: whether ForgetEmployer erases declarations whose outcome is unknown when the command does not decide.
+     */
+    public function allowErasureWithUnknownOutcomes(): bool
+    {
+        return $this->allowErasureWithUnknownOutcomes;
+    }
+
+    /**
+     * ADR 0015: whether ForgetEmployer erases an employer with an active local mandate when the command does not decide.
+     */
+    public function allowErasureWithActiveMandate(): bool
+    {
+        return $this->allowErasureWithActiveMandate;
     }
 
     /**

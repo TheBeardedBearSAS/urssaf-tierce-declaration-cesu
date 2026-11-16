@@ -8,6 +8,7 @@ use Symfony\Component\DependencyInjection\Loader\Configurator\ServicesConfigurat
 use Symfony\Component\DependencyInjection\Reference;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Bridge\Symfony\Command\CancelMandateCommand;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Bridge\Symfony\Command\EstimateContributionsCommand;
+use TheBeardedBear\UrssafTierceDeclarationCesu\Bridge\Symfony\Command\ForgetEmployerCommand;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Bridge\Symfony\Command\ImportEmployerCommand;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Bridge\Symfony\Command\ReconcileStaleDeclarationsCommand;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Bridge\Symfony\Command\RegisterMandateCommand;
@@ -41,6 +42,7 @@ final readonly class EntryPointRegistrar
         ImportEmployerCommand::class,
         RegisterMandateCommand::class,
         CancelMandateCommand::class,
+        ForgetEmployerCommand::class,
         ResolveDeclarationOutcomeCommand::class,
         RequeueInvalidCredentialsCommand::class,
     ];

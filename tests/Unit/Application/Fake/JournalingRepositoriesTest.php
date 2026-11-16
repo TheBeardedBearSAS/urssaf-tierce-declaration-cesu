@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace TheBeardedBear\UrssafTierceDeclarationCesu\Tests\Unit\Application\Fake;
 
 use PHPUnit\Framework\TestCase;
+use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Declaration\DeclarationRecordId;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Declaration\DeclarationState;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Employer\EmployerStage;
+use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Mandate\MandateId;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Mandate\MandateState;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Shared\Instant;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Shared\TenantId;
@@ -47,6 +49,31 @@ final class JournalingRepositoriesTest extends TestCase
 
         static::assertSame(['save:mandate-1'], $harness->journal->entries());
         static::assertCount(1, $harness->mandates->inner()->all());
+
+        $harness->mandates->delete(MandateId::fromString('mandate-1'));
+
+        static::assertSame(['save:mandate-1', 'delete:mandate-1'], $harness->journal->entries());
+        static::assertSame([], $harness->mandates->inner()->all());
+    }
+
+    public function testTheRecordsJournalTheEmployerErasureWithItsStatesAndDelegateTheCount(): void
+    {
+        $harness = new Harness();
+        $harness->record(1, DeclarationState::Declared);
+        $harness->record(2, DeclarationState::Error);
+        $harness->record(3, DeclarationState::Submitting);
+        $tenant = Harness::tenant();
+        $cesu = Harness::cesuNumber(1);
+
+        static::assertSame(1, $harness->declarations->countByEmployer($tenant, $cesu)['submitting']);
+        static::assertSame(1, $harness->declarations->countByEmployer($tenant, $cesu)['declared']);
+        static::assertSame([], $harness->journal->entries());
+
+        $deleted = $harness->declarations->deleteByEmployer($tenant, $cesu, [DeclarationState::Declared, DeclarationState::Error]);
+
+        static::assertSame(['record-1', 'record-2'], array_map(static fn(DeclarationRecordId $id): string => $id->value(), $deleted));
+        static::assertSame(['delete-by-employer:Z0003752390009:declared,error'], $harness->journal->entries());
+        static::assertCount(1, $harness->declarations->inner()->all());
     }
 
     public function testTheRecordsJournalTheirWritesAndDelegateTheirReads(): void

@@ -19,6 +19,7 @@ use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Declaration\OutcomeUnknown
 use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Declaration\SubmissionError;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Employer\EmployerAccountId;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Employer\EmployerStage;
+use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Employer\Event\EmployerForgotten;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Employer\Event\EmployerRegistered;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Employer\Event\EmployerStageChanged;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Employer\Event\EmployerStatusRefreshed;
@@ -51,6 +52,23 @@ final class IntegrationEventSamples
             ExternalReference::fromString('employer-1'),
             CesuNumber::fromString(self::CESU),
             $origin,
+            self::at(),
+        );
+    }
+
+    /**
+     * @param list<string> $mandateIds
+     * @param list<string> $recordIds
+     */
+    public static function employerForgotten(string $cesu = self::CESU, array $mandateIds = ['mandate-1', 'mandate-2'], array $recordIds = ['record-1', 'record-2', 'record-3']): EmployerForgotten
+    {
+        return new EmployerForgotten(
+            EmployerAccountId::fromString('account-1'),
+            self::tenant(),
+            ExternalReference::fromString('employer-1'),
+            CesuNumber::fromString($cesu),
+            array_map(MandateId::fromString(...), $mandateIds),
+            array_map(DeclarationRecordId::fromString(...), $recordIds),
             self::at(),
         );
     }

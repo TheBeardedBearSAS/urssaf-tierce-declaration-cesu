@@ -10,6 +10,7 @@ use TheBeardedBear\UrssafTierceDeclarationCesu\Contract\Event\DeclarationAlready
 use TheBeardedBear\UrssafTierceDeclarationCesu\Contract\Event\DeclarationDeclared;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Contract\Event\DeclarationOutcomeUnknown;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Contract\Event\DeclarationRejected;
+use TheBeardedBear\UrssafTierceDeclarationCesu\Contract\Event\EmployerForgotten;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Contract\Event\EmployerRegistered;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Contract\Event\EmployerStatusChanged;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Contract\Event\IntegrationEvent;
@@ -26,6 +27,7 @@ final class IntegrationEventTranslatorTest extends TestCase
             IntegrationEventSamples::employerRegistered(),
             IntegrationEventSamples::employerStatusRefreshed(),
             IntegrationEventSamples::employerStageChanged(),
+            IntegrationEventSamples::employerForgotten(),
             IntegrationEventSamples::mandateNotified(),
             IntegrationEventSamples::mandateConfirmed(),
             IntegrationEventSamples::mandateCancelled(),
@@ -40,6 +42,7 @@ final class IntegrationEventTranslatorTest extends TestCase
                 EmployerRegistered::class,
                 EmployerStatusChanged::class,
                 EmployerStatusChanged::class,
+                EmployerForgotten::class,
                 MandateNotified::class,
                 MandateConfirmed::class,
                 MandateCancelled::class,

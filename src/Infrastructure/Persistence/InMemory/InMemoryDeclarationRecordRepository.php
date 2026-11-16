@@ -13,6 +13,7 @@ use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Declaration\DeclarationRec
 use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Declaration\DeclarationState;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Exception\InvariantViolation;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Exception\RecordNotFound;
+use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Shared\CesuNumber;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Shared\ExternalReference;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Shared\Instant;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Shared\TenantId;
@@ -28,8 +29,11 @@ use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Shared\TenantId;
  *
  * Lists are ordered as documented by the port; records that compare equal keep their insertion order.
  *
+ * One method per query of the port plus the claim and erasure helpers, hence the method count and complexity.
+ *
  * @mago-expect lint:too-many-methods
  * @mago-expect lint:cyclomatic-complexity
+ * @mago-expect lint:kan-defect
  */
 final class InMemoryDeclarationRecordRepository implements DeclarationRecordRepository
 {
@@ -177,6 +181,52 @@ final class InMemoryDeclarationRecordRepository implements DeclarationRecordRepo
     public function delete(DeclarationRecordId $id): void
     {
         unset($this->records[$id->value()]);
+    }
+
+    #[Override]
+    public function countByEmployer(TenantId $tenantId, CesuNumber $employerCesuNumber): array
+    {
+        $counts = [];
+        foreach (DeclarationState::cases() as $state) {
+            $counts[$state->value] = 0;
+        }
+        foreach ($this->records as $record) {
+            if (!self::belongsTo($record, $tenantId, $employerCesuNumber)) {
+                continue;
+            }
+            ++$counts[$record->state()->value];
+        }
+
+        return $counts;
+    }
+
+    #[Override]
+    public function deleteByEmployer(TenantId $tenantId, CesuNumber $employerCesuNumber, array $states): array
+    {
+        $ids = [];
+        $selected = Selection::of($this->records)
+            ->where(
+                static fn(DeclarationRecord $record): bool => self::belongsTo($record, $tenantId, $employerCesuNumber)
+                    && \in_array($record->state(), $states, true),
+            )
+            ->sortedBy(static function (DeclarationRecord $a, DeclarationRecord $b): int {
+                $byCreation = Selection::compareInstants($a->createdAt(), $b->createdAt());
+
+                return $byCreation === 0 ? strcmp($a->id()->value(), $b->id()->value()) : $byCreation;
+            })
+            ->all();
+        foreach ($selected as $record) {
+            $ids[] = $record->id();
+            unset($this->records[$record->id()->value()]);
+        }
+
+        return $ids;
+    }
+
+    private static function belongsTo(DeclarationRecord $record, TenantId $tenantId, CesuNumber $employerCesuNumber): bool
+    {
+        return $record->tenantId()->equals($tenantId)
+            && $record->snapshot()->employerCesuNumber()->equals($employerCesuNumber);
     }
 
     private function assertUnique(DeclarationRecord $record): void

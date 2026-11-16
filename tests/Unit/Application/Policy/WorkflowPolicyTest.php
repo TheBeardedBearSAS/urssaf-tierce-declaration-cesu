@@ -11,6 +11,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Application\Policy\WorkflowPolicy;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Exception\InvariantViolation;
+use TheBeardedBear\UrssafTierceDeclarationCesu\Tests\Unit\Application\Fake\ErasurePolicies;
 
 /**
  * One method per scenario (ADR 0003, ADR 0009).
@@ -28,6 +29,8 @@ final class WorkflowPolicyTest extends TestCase
         static::assertSame(5, $policy->maxSubmissionAttempts());
         static::assertTrue($policy->requireLocalMandate());
         static::assertFalse($policy->allowFosterCarerDeclarations());
+        static::assertFalse($policy->allowErasureWithUnknownOutcomes());
+        static::assertFalse($policy->allowErasureWithActiveMandate());
         static::assertSame(100, $policy->pageSize(null));
         static::assertSame(1, $policy->pageSize(1));
         static::assertSame(1000, $policy->pageSize(1000));
@@ -165,5 +168,16 @@ final class WorkflowPolicyTest extends TestCase
     private static function policy(int $attempts, int $defaultPageSize, int $maxPageSize): WorkflowPolicy
     {
         return new WorkflowPolicy(new DateTimeZone('UTC'), new DateInterval('PT15M'), $attempts, true, false, $defaultPageSize, $maxPageSize);
+    }
+
+    public function testTheErasureOptInsAreIndependent(): void
+    {
+        $unknown = ErasurePolicies::of(true, false);
+        $active = ErasurePolicies::of(false, true);
+
+        static::assertTrue($unknown->allowErasureWithUnknownOutcomes());
+        static::assertFalse($unknown->allowErasureWithActiveMandate());
+        static::assertFalse($active->allowErasureWithUnknownOutcomes());
+        static::assertTrue($active->allowErasureWithActiveMandate());
     }
 }

@@ -12,7 +12,7 @@ use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Shared\TenantId;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Infrastructure\Persistence\InMemory\InMemoryMandateRepository;
 
 /**
- * Decorator over the production in-memory repository: journals every save as "save:<id>".
+ * Decorator over the production in-memory repository: journals every save as "save:<id>" and every delete as "delete:<id>".
  */
 final readonly class JournalingMandates implements MandateRepository
 {
@@ -57,5 +57,11 @@ final readonly class JournalingMandates implements MandateRepository
     public function findByEmployer(TenantId $tenantId, CesuNumber $cesuNumber): array
     {
         return $this->inner->findByEmployer($tenantId, $cesuNumber);
+    }
+
+    public function delete(MandateId $id): void
+    {
+        $this->journal->add('delete:' . $id->value());
+        $this->inner->delete($id);
     }
 }

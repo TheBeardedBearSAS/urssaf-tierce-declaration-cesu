@@ -5,11 +5,14 @@ declare(strict_types=1);
 namespace TheBeardedBear\UrssafTierceDeclarationCesu\Tests\Unit\Domain\Employer;
 
 use PHPUnit\Framework\TestCase;
+use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Declaration\DeclarationRecordId;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Employer\EmployerStage;
+use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Employer\Event\EmployerForgotten;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Employer\Event\EmployerRegistered;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Employer\Event\EmployerStageChanged;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Employer\Event\EmployerStatusRefreshed;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Employer\RegistrationOrigin;
+use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Mandate\MandateId;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Shared\CesuNumber;
 
 final class EventsTest extends TestCase
@@ -35,5 +38,22 @@ final class EventsTest extends TestCase
             static::assertSame('2026-11-15T10:00:00+00:00', $event->occurredAt()->format('c'));
             static::assertSame('account-1', $event->accountId()->value());
         }
+    }
+
+    public function testTheForgottenEventExposesItsConstructorArguments(): void
+    {
+        $cesu = CesuNumber::fromString('Z0003752390009');
+        $mandateIds = [MandateId::fromString('mandate-1')];
+        $recordIds = [DeclarationRecordId::fromString('record-1'), DeclarationRecordId::fromString('record-2')];
+
+        $forgotten = new EmployerForgotten(EmployerSamples::accountId(), EmployerSamples::tenantId(), EmployerSamples::externalReference(), $cesu, $mandateIds, $recordIds, EmployerSamples::instant());
+
+        static::assertSame('account-1', $forgotten->accountId()->value());
+        static::assertSame('tenant-1', $forgotten->tenantId()->value());
+        static::assertSame(EmployerSamples::externalReference()->value(), $forgotten->externalReference()->value());
+        static::assertSame($cesu, $forgotten->cesuNumber());
+        static::assertSame($mandateIds, $forgotten->mandateIds());
+        static::assertSame($recordIds, $forgotten->declarationRecordIds());
+        static::assertSame('2026-11-15T10:00:00+00:00', $forgotten->occurredAt()->format('c'));
     }
 }

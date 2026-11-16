@@ -39,6 +39,7 @@ use TheBeardedBear\UrssafTierceDeclarationCesu\Application\Port\WorkflowStatisti
 use TheBeardedBear\UrssafTierceDeclarationCesu\Bridge\Symfony\Command\CancelMandateCommand;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Bridge\Symfony\Command\CheckInstallationCommand;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Bridge\Symfony\Command\EstimateContributionsCommand;
+use TheBeardedBear\UrssafTierceDeclarationCesu\Bridge\Symfony\Command\ForgetEmployerCommand;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Bridge\Symfony\Command\ImportEmployerCommand;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Bridge\Symfony\Command\PurgeOutboxCommand;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Bridge\Symfony\Command\RegisterMandateCommand;
@@ -52,6 +53,7 @@ use TheBeardedBear\UrssafTierceDeclarationCesu\Bridge\Symfony\DependencyInjectio
 use TheBeardedBear\UrssafTierceDeclarationCesu\Bridge\Symfony\Diagnostic\AuthenticationCheck;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Bridge\Symfony\Diagnostic\ConfigurationCheck;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Bridge\Symfony\Diagnostic\CredentialsCheck;
+use TheBeardedBear\UrssafTierceDeclarationCesu\Bridge\Symfony\Diagnostic\DatabaseSchemaCheck;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Bridge\Symfony\Diagnostic\InstallationCheck;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Bridge\Symfony\Diagnostic\LockCheck;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Bridge\Symfony\Diagnostic\PersistenceCheck;
@@ -183,7 +185,7 @@ final class ServiceDefinitionsTest extends TestCase
     {
         $container = (new TestKernel([
             'business_timezone' => 'America/Martinique',
-            'workflow' => ['stale_submission_after' => 'PT5M', 'max_submission_attempts' => 3, 'require_local_mandate' => false, 'allow_foster_carer_declarations' => true, 'default_page_size' => 20, 'max_page_size' => 50],
+            'workflow' => ['stale_submission_after' => 'PT5M', 'max_submission_attempts' => 3, 'require_local_mandate' => false, 'allow_foster_carer_declarations' => true, 'default_page_size' => 20, 'max_page_size' => 50, 'erasure' => ['allow_unknown_outcomes' => true, 'allow_active_mandate' => true]],
         ]))->definitions();
 
         static::assertEquals(
@@ -195,6 +197,8 @@ final class ServiceDefinitionsTest extends TestCase
                 true,
                 20,
                 50,
+                '$allowErasureWithUnknownOutcomes' => true,
+                '$allowErasureWithActiveMandate' => true,
             ],
             $container->getDefinition(WorkflowPolicy::class)->getArguments(),
         );
@@ -362,7 +366,7 @@ final class ServiceDefinitionsTest extends TestCase
     {
         $container = (new TestKernel())->definitions();
 
-        foreach ([VerifyEmployerCommand::class, VerifyEmployeeCommand::class, EstimateContributionsCommand::class, ImportEmployerCommand::class, RegisterMandateCommand::class, CancelMandateCommand::class, ResolveDeclarationOutcomeCommand::class, RequeueInvalidCredentialsCommand::class] as $command) {
+        foreach ([VerifyEmployerCommand::class, VerifyEmployeeCommand::class, EstimateContributionsCommand::class, ImportEmployerCommand::class, RegisterMandateCommand::class, CancelMandateCommand::class, ForgetEmployerCommand::class, ResolveDeclarationOutcomeCommand::class, RequeueInvalidCredentialsCommand::class] as $command) {
             $definition = $container->getDefinition($command);
             static::assertSame('%urssaf_tierce_declaration_cesu.tenants%', $definition->getArgument('$configuredTenants'), $command);
             static::assertSame([[]], $definition->getTag('console.command'), $command);
@@ -388,6 +392,26 @@ final class ServiceDefinitionsTest extends TestCase
         $check = $container->getDefinition(CheckInstallationCommand::class)->getArguments();
         static::assertEquals(new TaggedIteratorArgument(InstallationCheck::TAG), $check[0]);
         static::assertSame('%urssaf_tierce_declaration_cesu.tenants%', $check[1]);
+    }
+
+    public function testTheDatabaseSchemaCheckIsWiredOnTheConfiguredEntityManagerOfTheDoctrineDriver(): void
+    {
+        $named = [
+            'dbal' => ['connections' => ['default' => ['driver' => 'pdo_sqlite', 'memory' => true], 'urssaf' => ['driver' => 'pdo_sqlite', 'memory' => true]]],
+            'orm' => ['entity_managers' => ['default' => ['connection' => 'default'], 'urssaf' => ['connection' => 'urssaf']]],
+        ];
+        $default = (new TestKernel(['persistence' => ['driver' => 'doctrine']], false, false, true))->definitions();
+        $dedicated = (new TestKernel(['persistence' => ['driver' => 'doctrine', 'entity_manager' => 'urssaf']], false, false, $named))->definitions();
+
+        static::assertSame(
+            [ConfigurationCheck::class, CredentialsCheck::class, AuthenticationCheck::class, TokenStoreCheck::class, PersistenceCheck::class, DatabaseSchemaCheck::class, LockCheck::class],
+            array_keys($default->findTaggedServiceIds(InstallationCheck::TAG)),
+        );
+        static::assertSame(['doctrine'], $default->getDefinition(PersistenceCheck::class)->getArguments());
+        static::assertEquals([new Reference('doctrine.orm.default_entity_manager'), 'default'], $default->getDefinition(DatabaseSchemaCheck::class)->getArguments());
+        static::assertSame(DatabaseSchemaCheck::class, $default->getDefinition(DatabaseSchemaCheck::class)->getClass());
+        static::assertTrue($default->getDefinition(DatabaseSchemaCheck::class)->hasTag(InstallationCheck::TAG));
+        static::assertEquals([new Reference('doctrine.orm.urssaf_entity_manager'), 'urssaf'], $dedicated->getDefinition(DatabaseSchemaCheck::class)->getArguments());
     }
 
     public function testTheSimulatedGatewayIsCheckedInsteadOfTheAuthentication(): void

@@ -5,13 +5,16 @@ declare(strict_types=1);
 namespace TheBeardedBear\UrssafTierceDeclarationCesu\Tests\Unit\Domain\Employer;
 
 use PHPUnit\Framework\TestCase;
+use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Declaration\DeclarationRecordId;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Employee\EmployeeReferenceKind;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Employer\EmployerAccount;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Employer\EmployerStage;
+use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Employer\Event\EmployerForgotten;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Employer\Event\EmployerRegistered;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Employer\Event\EmployerStageChanged;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Employer\Event\EmployerStatusRefreshed;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Employer\RegistrationOrigin;
+use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Mandate\MandateId;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Shared\DomainEvent;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Tests\Unit\Domain\Employee\EmployeeSamples;
 
@@ -300,5 +303,32 @@ final class EmployerAccountTest extends TestCase
             array_map(static fn(DomainEvent $event): string => $event::class, $events),
         );
         static::assertSame(EmployerStage::AiciActive, $account->stage());
+    }
+
+    public function testForgettingRecordsOneEventWithTheErasedIdsAndKeepsTheState(): void
+    {
+        $account = EmployerSamples::account();
+        $account->markMandateNotified(EmployerSamples::instant('2026-11-16T10:00:00Z'));
+        $account->releaseEvents();
+        $updatedAt = $account->updatedAt();
+        $mandateIds = [MandateId::fromString('mandate-1')];
+        $recordIds = [DeclarationRecordId::fromString('record-1'), DeclarationRecordId::fromString('record-2')];
+
+        $account->forget(EmployerSamples::instant('2026-11-18T10:00:00Z'), $mandateIds, $recordIds);
+
+        $events = $account->releaseEvents();
+        static::assertCount(1, $events);
+        $event = $events[0];
+        static::assertInstanceOf(EmployerForgotten::class, $event);
+        static::assertSame($account->id(), $event->accountId());
+        static::assertSame($account->tenantId(), $event->tenantId());
+        static::assertSame($account->externalReference(), $event->externalReference());
+        static::assertSame($account->cesuNumber()->value(), $event->cesuNumber()->value());
+        static::assertSame($mandateIds, $event->mandateIds());
+        static::assertSame($recordIds, $event->declarationRecordIds());
+        static::assertSame('2026-11-18T10:00:00+00:00', $event->occurredAt()->format('c'));
+        static::assertSame(EmployerStage::MandateNotified, $account->stage());
+        static::assertSame($updatedAt, $account->updatedAt());
+        static::assertSame([], $account->releaseEvents());
     }
 }

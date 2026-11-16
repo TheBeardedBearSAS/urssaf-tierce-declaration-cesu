@@ -117,6 +117,19 @@ final readonly class DoctrineMandateRepository implements MandateRepository
     }
 
     /**
+     * GDPR erasure: the mandate and its key row go in one transaction (nothing happens for an unknown mandate), so that
+     * the employer can hold a new active mandate afterwards.
+     */
+    #[Override]
+    public function delete(MandateId $id): void
+    {
+        $this->connection()->transactional(function () use ($id): void {
+            $this->discard($id);
+            $this->connection()->delete($this->keyTable(), ['mandate_id' => $id], ActiveMandate::TYPES);
+        });
+    }
+
+    /**
      * @throws InvariantViolation always
      */
     private function refuseConcurrentModification(string $id): never

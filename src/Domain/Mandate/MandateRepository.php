@@ -35,4 +35,11 @@ interface MandateRepository
      * @return list<Mandate>
      */
     public function findByEmployer(TenantId $tenantId, CesuNumber $cesuNumber): array;
+
+    /**
+     * GDPR erasure (ForgetEmployer, lot 10 design §2.1): removes the mandate and, in the Doctrine bridge, its
+     * active-mandate key row, so that the employer can hold a new active mandate afterwards. Nothing happens when the
+     * mandate does not exist. No event.
+     */
+    public function delete(MandateId $id): void;
 }

@@ -29,6 +29,7 @@ or declaration record id), `externalReference` (your reference of the employer o
 |---|---|---|---|
 | `EmployerRegistered` | `urssaf.cesu.employer.registered` | an employer is tracked: registered (010) or imported | `cesuNumber`, `origin` (`registered`, `imported`) |
 | `EmployerStatusChanged` | `urssaf.cesu.employer.status_changed` | a 020 refresh, or a stage change after 030 / 031 | `cesuNumber`, `previousStage`, `stage`, `mandatePresent`, `aiciActive`, `onlineAccountState`, `sepaMandateState` |
+| `EmployerForgotten` | `urssaf.cesu.employer.forgotten` | an employer was erased from the package store (`ForgetEmployer`, [ADR 0015](adr/0015-employer-erasure.md)) | `cesuNumber`, `mandateIds`, `declarationRecordIds` |
 | `MandateNotified` | `urssaf.cesu.mandate.notified` | the mandate was notified (030) | `cesuNumber` |
 | `MandateConfirmed` | `urssaf.cesu.mandate.confirmed` | 020 reports the mandate present: the prerequisite of 050 | `cesuNumber` |
 | `MandateCancelled` | `urssaf.cesu.mandate.cancelled` | the mandate was cancelled (031) | `cesuNumber` |
@@ -47,6 +48,18 @@ Notes:
 - No event exists for requeued declarations, failed submissions and rejected credentials (their domain events carry no
   external reference): monitor them with `GetWorkflowOverview` (`needingAttention()`, see
   [workflow.md](workflow.md#monitoring)) and list them with `FindDeclarations::inState()`.
+
+### Erasure
+
+`EmployerForgotten` tells you to erase your own copies of the employer, its mandates and its declarations: `aggregateId`
+is the erased employer account id, `mandateIds` and `declarationRecordIds` are the `aggregateId` of the erased mandate
+and declaration events (oldest first). It carries identifiers only, no birth date. Nothing was erased at URSSAF.
+
+The outbox is **not** purged by the erasure ([ADR 0015](adr/0015-employer-erasure.md)): the entries already dispatched
+are deleted by `urssaf:cesu:outbox:purge` after `outbox.retention` (default `P30D`), the pending ones stay until
+delivered (a sink that keeps failing keeps them: monitor the relay and purge earlier if your policy requires it). An
+event of a listed mandate or declaration delivered **after** `employer.forgotten` (an earlier delivery failed) must be
+ignored, never used to recreate a copy.
 
 ## Wiring
 
@@ -82,5 +95,5 @@ final readonly class MarkDeclarationDeclared
 }
 ```
 
-The relay stores events with `IntegrationEventCodec::encode()` / `decode()` (PHP serialization restricted to the nine
+The relay stores events with `IntegrationEventCodec::encode()` / `decode()` (PHP serialization restricted to the ten
 event classes) when the outbox needs a string.

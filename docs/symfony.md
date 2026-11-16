@@ -62,6 +62,8 @@ The configuration tree is defined in `Bridge\Symfony\DependencyInjection\BundleC
 | `workflow.allow_foster_carer_declarations` | bool | `false` | Accepts `typeEmploi = AF` declarations locally (ADR 0009). |
 | `workflow.default_page_size` | int >= 1 | `100` | Records loaded by a batch use case when no limit is given. |
 | `workflow.max_page_size` | int >= 1 | `1000` | Upper bound of the records loaded by a batch use case. |
+| `workflow.erasure.allow_unknown_outcomes` | bool | `false` | Default of `ForgetEmployer` for declarations whose outcome is unknown: refused when `false` ([ADR 0015](adr/0015-employer-erasure.md)). A submission in flight is always refused. |
+| `workflow.erasure.allow_active_mandate` | bool | `false` | Default of `ForgetEmployer` for an employer whose mandate is still active (it stays active at URSSAF): refused when `false` (ADR 0015). |
 | `persistence.driver` | enum `in_memory` \| `doctrine` \| `custom` | `doctrine` if `doctrine/orm` is installed, else `in_memory` | Persistence adapter. `doctrine` needs DoctrineBundle (the container build fails without it); `in_memory` is for tests and prototypes. |
 | `persistence.entity_manager` | string | `default` | Entity manager that gets the mapping (driver `doctrine`). **Use a dedicated entity manager** (see [Doctrine](#doctrine)): the repositories flush the whole unit of work of the entity manager they use. |
 | `persistence.employer_account_repository` | string \| null | `null` | Service id of your `EmployerAccountRepository` (driver `custom`). |
@@ -141,6 +143,7 @@ URSSAF error descriptions are not printed.
 | `urssaf:cesu:employer:import` | Track an employer already registered at URSSAF (no URSSAF call). | optional if one tenant is configured |
 | `urssaf:cesu:mandate:register` | Notify the third-party declaration mandate of a tracked employer (method 030). | optional if one tenant is configured |
 | `urssaf:cesu:mandate:cancel` | Cancel the mandate (method 031), after a confirmation (`--force` in non-interactive mode). | optional if one tenant is configured |
+| `urssaf:cesu:employer:forget` | Erase a tracked employer, its mandates and its declaration records from the local store (GDPR, [ADR 0015](adr/0015-employer-erasure.md)); nothing is sent to URSSAF. Asks for a confirmation (`--force` in non-interactive mode, it only skips the confirmation); `--allow-active-mandate` and `--allow-unknown-outcomes` override the `workflow.erasure.*` defaults for the run. See [workflow.md](workflow.md#erasure-gdpr). | optional if one tenant is configured |
 | `urssaf:cesu:employers:sync-status` | Refresh the tracked employers, least recently checked first (method 020, employer only); `--async` dispatches one message per tenant. | optional, default: every tenant with employers; **required with `--employer`** (an employer is identified within a tenant) |
 | `urssaf:cesu:declarations:reconcile-stale` | Move the declarations left `submitting` for `workflow.stale_submission_after` to manual review: they are never resent ([ADR 0003](adr/0003-retry-and-unknown-outcome.md)). | none (all tenants) |
 | `urssaf:cesu:declarations:resolve` | Settle an `outcome_unknown` declaration after a manual check: `--declared-as=<idDeclaration>` or `--not-received`. | optional if one tenant is configured |
@@ -159,7 +162,7 @@ with `--declaration=<external reference>` or `--record-id=<id>`.
 | Exit code | When |
 |---|---|
 | `0` | Done (whatever the remote answer of a read: an unregistered employer is a result); lock held (skipped); `--dry-run`. |
-| `1` | A package exception stops the command (URSSAF refusal, authentication failure, unavailability, unknown outcome, record not found...); a batch item ended `failed`, `invalid_credentials` or `manual_review`; a failed delivery or check. |
+| `1` | A package exception stops the command (URSSAF refusal, authentication failure, unavailability, unknown outcome, record not found, erasure refused...); a batch item ended `failed`, `invalid_credentials` or `manual_review`; a failed delivery or check. |
 | `2` | Invalid usage: missing, conflicting or malformed option, no tenant, input rejected by validation, a hidden value requested in non-interactive mode. |
 
 Outcomes (`Application\Dto\ItemOutcome`) are printed in the report of the batch commands: `declared`, `rejected`,

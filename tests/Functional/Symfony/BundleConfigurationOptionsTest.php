@@ -63,6 +63,7 @@ final class BundleConfigurationOptionsTest extends TestCase
                 'allow_foster_carer_declarations' => true,
                 'default_page_size' => 20,
                 'max_page_size' => 50,
+                'erasure' => ['allow_unknown_outcomes' => true, 'allow_active_mandate' => true],
             ],
         ]);
         $policy = $harness->privateService(WorkflowPolicy::class, WorkflowPolicy::class);
@@ -74,6 +75,27 @@ final class BundleConfigurationOptionsTest extends TestCase
         static::assertTrue($policy->allowFosterCarerDeclarations());
         static::assertSame(20, $policy->pageSize(null));
         static::assertSame(50, $policy->pageSize(500));
+        static::assertTrue($policy->allowErasureWithUnknownOutcomes());
+        static::assertTrue($policy->allowErasureWithActiveMandate());
+    }
+
+    public function testTheErasureDefaultsAreStrict(): void
+    {
+        $policy = Harness::boot()->privateService(WorkflowPolicy::class, WorkflowPolicy::class);
+
+        static::assertFalse($policy->allowErasureWithUnknownOutcomes());
+        static::assertFalse($policy->allowErasureWithActiveMandate());
+    }
+
+    public function testEachErasureOptionIsPassedToItsOwnPolicyValue(): void
+    {
+        $unknown = Harness::boot(['workflow' => ['erasure' => ['allow_unknown_outcomes' => true]]])->privateService(WorkflowPolicy::class, WorkflowPolicy::class);
+        $active = Harness::boot(['workflow' => ['erasure' => ['allow_active_mandate' => true]]])->privateService(WorkflowPolicy::class, WorkflowPolicy::class);
+
+        static::assertTrue($unknown->allowErasureWithUnknownOutcomes());
+        static::assertFalse($unknown->allowErasureWithActiveMandate());
+        static::assertFalse($active->allowErasureWithUnknownOutcomes());
+        static::assertTrue($active->allowErasureWithActiveMandate());
     }
 
     public function testTheSmallestLimitsAreAccepted(): void

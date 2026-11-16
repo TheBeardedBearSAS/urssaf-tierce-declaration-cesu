@@ -26,7 +26,7 @@ final class HandlersRegistrationTest extends TestCase
         $harness = Harness::boot(['outbox' => ['enabled' => true, 'sink' => 'event_dispatcher']]);
 
         $handlers = self::handlersOfTheApplicationLayer();
-        static::assertCount(22, $handlers);
+        static::assertCount(23, $handlers);
         foreach ($handlers as $handler) {
             static::assertTrue($harness->has($handler), $handler);
             static::assertInstanceOf($handler, $harness->get($handler));

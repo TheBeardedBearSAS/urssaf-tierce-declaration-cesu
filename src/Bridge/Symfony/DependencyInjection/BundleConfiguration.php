@@ -245,6 +245,14 @@ final class BundleConfiguration
                 ->booleanNode('allow_foster_carer_declarations')->defaultFalse()->info('Accepts "typeEmploi = AF" declarations locally (ADR 0009).')->end()
                 ->integerNode('default_page_size')->min(1)->defaultValue(WorkflowPolicy::DEFAULT_PAGE_SIZE)->info('Records loaded by a batch use case without limit.')->end()
                 ->integerNode('max_page_size')->min(1)->defaultValue(WorkflowPolicy::MAX_PAGE_SIZE)->info('Upper bound of a batch.')->end()
+                ->arrayNode('erasure')
+                    ->addDefaultsIfNotSet()
+                    ->info('Defaults of the employer erasure (ForgetEmployer, urssaf:cesu:employer:forget, ADR 0015); a submission in flight is always refused.')
+                    ->children()
+                        ->booleanNode('allow_unknown_outcomes')->defaultFalse()->info('Erases the declarations whose outcome is unknown instead of refusing.')->end()
+                        ->booleanNode('allow_active_mandate')->defaultFalse()->info('Erases an employer whose mandate is still active (it stays active at URSSAF) instead of refusing.')->end()
+                    ->end()
+                ->end()
             ->end();
 
         return $node;

@@ -80,6 +80,12 @@ final class InMemoryMandateRepository implements MandateRepository
             ->copies();
     }
 
+    #[Override]
+    public function delete(MandateId $id): void
+    {
+        unset($this->mandates[$id->value()]);
+    }
+
     private function assertSingleActive(Mandate $mandate): void
     {
         if (!$mandate->isActive()) {
