@@ -7,6 +7,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Changed
+
+- Every source file now carries a copyright and `SPDX-License-Identifier: MIT` header, enforced by PHP CS Fixer
+  (`header_comment`) for PHP and by `make guard` (`bin/check-spdx`) for the other source files.
+
 ### Fixed
 
 - Contract suite: `URSSAF_SANDBOX_TOKEN_URI` (and `URSSAF_SANDBOX_BASE_URI`) must now be an https URI and can no longer target

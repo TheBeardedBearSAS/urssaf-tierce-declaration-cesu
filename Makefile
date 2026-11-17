@@ -1,3 +1,9 @@
+# This file is part of thebeardedbear/urssaf-tierce-declaration-cesu.
+#
+# Copyright (c) TheBeardedBear and the urssaf-tierce-declaration-cesu contributors
+#
+# SPDX-License-Identifier: MIT
+
 # Every target runs inside Docker; no local PHP/Composer is required.
 #
 # Tooling notes:
@@ -99,10 +105,11 @@ hadolint: ## Lint the Dockerfiles (hadolint, .hadolint.yaml)
 	docker run --rm -v "$(CURDIR)":/repo:ro -w /repo hadolint/hadolint:v2.15.1@sha256:32dac94127fd60b7b7e3fbfc65e1383b9b5e25c9bfd7b8536de7a539fe68a12d \
 		hadolint docker/php/Dockerfile
 
-guard: ## Fail if the forbidden word is found in the repository
+guard: ## Fail on the forbidden word or a missing SPDX licence header
 	@if grep -rIil --exclude-dir=vendor --exclude-dir=var --exclude-dir=.git 'extra''bat' . ; then \
 		echo "Forbidden word found (see files above)"; exit 1; \
 	fi
+	$(PHP) sh bin/check-spdx
 
 flex-endpoint: ## Build the Flex endpoint of the recipe in var/flex-endpoint
 	$(PHP) php bin/build-flex-endpoint var/flex-endpoint https://flex.invalid/urssaf-cesu
