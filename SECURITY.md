@@ -36,6 +36,13 @@ sha256sum --check SHA256SUMS
 gh attestation verify urssaf-tierce-declaration-cesu-vX.Y.Z.zip --repo TheBeardedBearSAS/urssaf-tierce-declaration-cesu
 ```
 
+## Security design and review
+
+- [Assurance case](docs/security/assurance-case.md): security requirements, threat model, trust boundaries, secure
+  design principles and the countermeasures against common implementation weaknesses.
+- [Security review, November 2026](docs/security/security-review-2026-11.md): design and code review against that case,
+  with its findings.
+
 ## Scope
 
 In scope: the code of this package (HTTP client, OAuth2 token handling, validation, wire encoding and decoding,
