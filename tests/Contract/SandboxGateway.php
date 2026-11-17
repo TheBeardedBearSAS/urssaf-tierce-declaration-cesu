@@ -57,6 +57,7 @@ final class SandboxGateway
         $credentials = $env->credentials();
         $tenantId = TenantId::fromString(self::TENANT);
         $baseUri = $env->baseUri();
+        $tokenUri = $env->tokenUri();
         $configuration = new ApiConfiguration(Environment::Sandbox, $baseUri);
         $numericConfiguration = new ApiConfiguration(
             Environment::Sandbox,
@@ -70,7 +71,7 @@ final class SandboxGateway
         );
 
         $factory = new Psr17Factory();
-        $http = new SandboxHttpClient(new Psr18Client(HttpClient::create(['timeout' => 30]), $factory, $factory), $env->tokenUri());
+        $http = new SandboxHttpClient(new Psr18Client(HttpClient::create(['timeout' => 30]), $factory, $factory), $tokenUri);
         $transport = new HttpTransport($http, $factory, $factory);
         $provider = new InMemoryCredentialsProvider([self::TENANT => $credentials]);
         $tokens = new InMemoryTokenStore();
@@ -78,7 +79,7 @@ final class SandboxGateway
 
         SandboxReport::describeRun(
             (string) parse_url($configuration->baseUri(), \PHP_URL_HOST),
-            (string) parse_url($env->tokenUri() ?? $configuration->tokenUri(), \PHP_URL_HOST),
+            (string) parse_url($tokenUri ?? $configuration->tokenUri(), \PHP_URL_HOST),
             $env->writesAllowed(),
         );
 
@@ -88,7 +89,7 @@ final class SandboxGateway
             $http,
             $tenantId,
             $configuration,
-            $env->tokenUri(),
+            $tokenUri,
             $credentials,
             $factory,
         );

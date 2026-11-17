@@ -6,6 +6,7 @@ namespace TheBeardedBear\UrssafTierceDeclarationCesu\Tests\Contract;
 
 use Nyholm\Psr7\Request;
 use Nyholm\Psr7\Response;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Client\ClientInterface;
@@ -93,6 +94,37 @@ final class SandboxSupportTest extends TestCase
         $env->baseUri();
     }
 
+    /**
+     * @return iterable<string, array{string, string}>
+     */
+    public static function provideRefusedUris(): iterable
+    {
+        yield 'production host' => ['https://api.urssaf.fr/api/oauth/v1/token', 'targets the production host'];
+        yield 'production host, upper case, trailing dot' => ['https://API.URSSAF.FR./token', 'targets the production host'];
+        yield 'http scheme' => ['http://sandbox.example.test/token', 'must be an https URI'];
+        yield 'no host' => ['https:token', 'has no host'];
+    }
+
+    #[DataProvider('provideRefusedUris')]
+    public function testEnvironmentRefusesAnUnsafeTokenUri(string $uri, string $reason): void
+    {
+        $env = SandboxEnvironment::fromArray([SandboxEnvironment::TOKEN_URI => $uri]);
+
+        $this->expectException(SandboxMisconfigured::class);
+        $this->expectExceptionMessage(SandboxEnvironment::TOKEN_URI);
+        $this->expectExceptionMessage($reason);
+        $env->tokenUri();
+    }
+
+    public function testEnvironmentRefusesAnHttpBaseUri(): void
+    {
+        $env = SandboxEnvironment::fromArray([SandboxEnvironment::BASE_URI => 'http://sandbox.example.test']);
+
+        $this->expectException(SandboxMisconfigured::class);
+        $this->expectExceptionMessage('must be an https URI');
+        $env->baseUri();
+    }
+
     public function testEnvironmentNamesTheVariableNeverTheValue(): void
     {
         $bad = SandboxEnvironment::fromArray([SandboxEnvironment::EMPLOYEE_CESU_NUMBER => 'secret-value']);
@@ -140,6 +172,19 @@ final class SandboxSupportTest extends TestCase
         $env = SandboxEnvironment::fromArray([SandboxEnvironment::BASE_URI => 'https://api.urssaf.fr']);
 
         static::assertNull(SandboxGateway::fromEnvironment($env));
+    }
+
+    public function testGatewayRefusesAProductionTokenUriEagerly(): void
+    {
+        $env = SandboxEnvironment::fromArray([
+            SandboxEnvironment::CLIENT_ID => 'id',
+            SandboxEnvironment::CLIENT_SECRET => 'secret',
+            SandboxEnvironment::TOKEN_URI => 'https://api.urssaf.fr/token',
+        ]);
+
+        $this->expectException(SandboxMisconfigured::class);
+        $this->expectExceptionMessage(SandboxEnvironment::TOKEN_URI);
+        SandboxGateway::fromEnvironment($env);
     }
 
     public function testGatewayIsWiredWithoutAnyNetworkCall(): void

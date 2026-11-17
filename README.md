@@ -265,8 +265,8 @@ manual `contract` CI job):
 |---|---|---|
 | `URSSAF_SANDBOX_CLIENT_ID` | yes | OAuth2 client id of your sandbox subscription (secret) |
 | `URSSAF_SANDBOX_CLIENT_SECRET` | yes | OAuth2 client secret (secret) |
-| `URSSAF_SANDBOX_BASE_URI` | no | sandbox host override (default `https://api-edi.urssaf.fr`); the production host is refused |
-| `URSSAF_SANDBOX_TOKEN_URI` | no | full token URL used instead of `<base>/api/oauth/v1/token` (open point 5.14 of the API reference) |
+| `URSSAF_SANDBOX_BASE_URI` | no | sandbox host override (default `https://api-edi.urssaf.fr`); an https URI is required and the production host is refused |
+| `URSSAF_SANDBOX_TOKEN_URI` | no | full token URL used instead of `<base>/api/oauth/v1/token` (open point 5.14 of the API reference); an https URI is required and the production host is refused, as for the base URI, since the client credentials are posted to it |
 | `URSSAF_SANDBOX_EMPLOYER_CESU_NUMBER` | no | a sandbox employer Cesu number (enables the employer tests) |
 | `URSSAF_SANDBOX_EMPLOYER_BIRTH_DATE` | with the above | its birth date, `YYYY-MM-DD` |
 | `URSSAF_SANDBOX_EMPLOYEE_CESU_NUMBER` | no | a sandbox employee Cesu number (enables the pair and employee tests) |
