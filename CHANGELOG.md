@@ -7,6 +7,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Fixed
+
+- Contract suite: `URSSAF_SANDBOX_TOKEN_URI` (and `URSSAF_SANDBOX_BASE_URI`) must now be an https URI and can no longer target
+  the production host (`api.urssaf.fr`, case and trailing dot ignored). The sandbox client credentials are posted to the
+  token URI, so a production value would have leaked them. Test tooling only, the published SDK is unchanged.
+
 ## [0.1.0] - 2026-11-16
 
 First release.

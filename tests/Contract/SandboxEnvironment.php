@@ -94,26 +94,19 @@ final readonly class SandboxEnvironment
     }
 
     /**
-     * @throws SandboxMisconfigured when the host is the production host
+     * @throws SandboxMisconfigured when the URI is not an https URI, has no host or targets the production host
      */
     public function baseUri(): ?string
     {
-        $baseUri = $this->values[self::BASE_URI] ?? null;
-        if (null === $baseUri) {
-            return null;
-        }
-
-        $host = parse_url($baseUri, \PHP_URL_HOST);
-        if (\is_string($host) && self::PRODUCTION_HOST === strtolower($host)) {
-            throw SandboxMisconfigured::variable(self::BASE_URI, 'targets the production host, which is refused', null);
-        }
-
-        return $baseUri;
+        return $this->safeUri(self::BASE_URI);
     }
 
+    /**
+     * @throws SandboxMisconfigured when the URI is not an https URI, has no host or targets the production host
+     */
     public function tokenUri(): ?string
     {
-        return $this->values[self::TOKEN_URI] ?? null;
+        return $this->safeUri(self::TOKEN_URI);
     }
 
     /**
@@ -148,6 +141,34 @@ final readonly class SandboxEnvironment
     public function writesAllowed(): bool
     {
         return '1' === ($this->values[self::ALLOW_WRITES] ?? null);
+    }
+
+    /**
+     * An absolute https URI with a host, which is not the production host (compared lowercased, without trailing dot):
+     * the client credentials are posted to it, so they must never reach production.
+     *
+     * @throws SandboxMisconfigured
+     */
+    private function safeUri(string $variable): ?string
+    {
+        $uri = $this->values[$variable] ?? null;
+        if (null === $uri) {
+            return null;
+        }
+
+        $scheme = parse_url($uri, \PHP_URL_SCHEME);
+        $host = parse_url($uri, \PHP_URL_HOST);
+        if (!\is_string($scheme) || 'https' !== strtolower($scheme)) {
+            throw SandboxMisconfigured::variable($variable, 'must be an https URI', null);
+        }
+        if (!\is_string($host)) {
+            throw SandboxMisconfigured::variable($variable, 'has no host', null);
+        }
+        if (self::PRODUCTION_HOST === rtrim(strtolower($host), '.')) {
+            throw SandboxMisconfigured::variable($variable, 'targets the production host, which is refused', null);
+        }
+
+        return $uri;
     }
 
     /**
