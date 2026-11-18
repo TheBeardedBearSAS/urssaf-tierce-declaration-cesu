@@ -25,6 +25,13 @@
     // so 30 s left 10 mutants untested on the CI runners. A higher limit makes the gate stricter, not weaker;
     // `make infection` and the CI job also fail when any mutant is skipped.
     "timeout": 180,
+    // A timed-out mutant is not a verdict (the covering tests never finished), so it counts as escaped and breaks the
+    // MSI gate. The code is written so that every mutant terminates (no unbounded loop, no blocking call), and
+    // `make infection` and the CI job also fail on any "Timed Out" or "Syntax Errors" mutant.
+    "timeoutsAsEscaped": true,
+    // `make infection` and the CI job also pass --only-covering-test-cases (command line only): each mutant runs just the
+    // test cases that cover its line instead of the whole test files, so a mutant never waits on dozens of unrelated
+    // kernel-booting tests and the machine load cannot push it past the time limit.
     "minMsi": 100,
     "minCoveredMsi": 100
 }

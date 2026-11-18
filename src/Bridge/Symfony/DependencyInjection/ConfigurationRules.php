@@ -139,7 +139,11 @@ final class ConfigurationRules
         /** @var array{name: ?string, value: ?string} $header */
         $header = $value;
 
-        return ($header['name'] === null || $header['name'] === '') !== ($header['value'] === null || $header['value'] === '');
+        // Named so that every mutant of the comparison stays valid PHP (a bare `a || b !== c || d` does not parse).
+        $nameIsBlank = $header['name'] === null || $header['name'] === '';
+        $valueIsBlank = $header['value'] === null || $header['value'] === '';
+
+        return $nameIsBlank !== $valueIsBlank;
     }
 
     /**

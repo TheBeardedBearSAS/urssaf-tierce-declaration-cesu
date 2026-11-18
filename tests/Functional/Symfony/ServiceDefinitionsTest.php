@@ -50,6 +50,7 @@ use TheBeardedBear\UrssafTierceDeclarationCesu\Bridge\Symfony\Command\EstimateCo
 use TheBeardedBear\UrssafTierceDeclarationCesu\Bridge\Symfony\Command\ForgetEmployerCommand;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Bridge\Symfony\Command\ImportEmployerCommand;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Bridge\Symfony\Command\PurgeOutboxCommand;
+use TheBeardedBear\UrssafTierceDeclarationCesu\Bridge\Symfony\Command\ReconcileStaleDeclarationsCommand;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Bridge\Symfony\Command\RegisterMandateCommand;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Bridge\Symfony\Command\RelayOutboxCommand;
 use TheBeardedBear\UrssafTierceDeclarationCesu\Bridge\Symfony\Command\RequeueInvalidCredentialsCommand;
@@ -379,6 +380,13 @@ final class ServiceDefinitionsTest extends TestCase
             static::assertSame('%urssaf_tierce_declaration_cesu.tenants%', $definition->getArgument('$configuredTenants'), $command);
             static::assertSame([[]], $definition->getTag('console.command'), $command);
         }
+    }
+
+    public function testTheReconcileCommandIsRegisteredAsAConsoleCommand(): void
+    {
+        $definition = (new TestKernel())->definitions()->getDefinition(ReconcileStaleDeclarationsCommand::class);
+
+        static::assertSame([[]], $definition->getTag('console.command'));
     }
 
     public function testTheChecksAreRegisteredInReportOrder(): void
