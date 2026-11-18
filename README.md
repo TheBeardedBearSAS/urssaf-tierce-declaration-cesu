@@ -242,6 +242,7 @@ PHP 8.2+. Symfony 6.4 / 7.x for the bundle (optional). Doctrine persistence (opt
 
 ```sh
 make install     # build the image, install dependencies
+make coverage-branches # branch coverage (Xdebug, slow), at least 96 % enforced
 make ci          # full quality gate: cs, rector, phpstan, mago, deptrac, composer checks, hadolint, guard, coverage, infection
 make test        # unit + functional tests
 make bench       # benchmarks (PHPBench, tests/Benchmark), added with the implementation
@@ -321,8 +322,11 @@ Project page and integration offer: [the-bearded-bear.com/open-source/urssaf-tie
 
 ## Contributing and security
 
-Contributions are welcome: see [CONTRIBUTING.md](CONTRIBUTING.md). Report vulnerabilities privately as described in
-[SECURITY.md](SECURITY.md), never in a public issue.
+Contributions are welcome: see [CONTRIBUTING.md](CONTRIBUTING.md) and the [Code of Conduct](CODE_OF_CONDUCT.md).
+The project's governance is described in [GOVERNANCE.md](GOVERNANCE.md) and its direction in [ROADMAP.md](ROADMAP.md).
+Report vulnerabilities privately as described in [SECURITY.md](SECURITY.md), never in a public issue.
+Security design and review: [assurance case](docs/security/assurance-case.md) (threat model, trust boundaries,
+design principles, countered weaknesses) and [security review](docs/security/security-review-2026-11.md).
 
 ## License
 
