@@ -61,7 +61,9 @@ final class VerifyEmployeeCommand extends Command
             $tenant = CommandTenants::tenantOrSingleConfigured($input, $this->configuredTenants);
             $cesuNumber = CommandOptions::argument($input, self::ARGUMENT_CESU_NUMBER);
             $nir = $input->getOption(self::OPTION_NIR) === true;
-            if (($cesuNumber !== null) === $nir) {
+            // Named so that every mutant of the comparison stays valid PHP (a bare `a !== null === b` does not parse).
+            $hasCesuNumber = $cesuNumber !== null;
+            if ($hasCesuNumber === $nir) {
                 throw new InvalidOptionException('Give either the cesu-number argument or --nir.');
             }
             $employee = $nir

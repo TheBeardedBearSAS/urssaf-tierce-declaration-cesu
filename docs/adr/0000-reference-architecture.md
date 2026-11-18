@@ -98,3 +98,6 @@ Consequences), accepted by the lead before the code that implements them.
 - Infection `timeout` is 180 s instead of the reference 30 s, and `make infection` and the CI job fail when a mutant
   is *skipped*: Infection never runs a mutant whose covering tests exceed the limit in total, while MSI still reads
   100 %. The change makes the gate stricter (justified in `infection.json5`).
+  The gate also fails on *timed out* and *syntax error* mutants (`timeoutsAsEscaped`, plus summary checks): neither is
+  a verdict, so none may go unevaluated; each mutant runs only its covering test cases (`--only-covering-test-cases`),
+  so it never waits on unrelated kernel-booting tests. Comparisons whose mutants would not parse use a named variable.

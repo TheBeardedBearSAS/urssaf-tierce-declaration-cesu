@@ -99,9 +99,14 @@ final class CommandSelectors
         $reference = CommandOptions::text($input, self::OPTION_DECLARATION);
         $recordId = CommandOptions::text($input, self::OPTION_RECORD_ID);
 
+        // Evaluated on their own lines, before the match: a condition inside an arm is only "covered" by the tests that
+        // select that arm, so the tests that refuse several options would not count as covering its mutants.
+        $onlyReference = $reference !== null && $recordId === null;
+        $onlyRecordId = $recordId !== null && $reference === null;
+
         return match (true) {
-            $reference !== null && $recordId === null => DeclarationSelector::byExternalReference(ExternalReference::fromString($reference)),
-            $recordId !== null && $reference === null => DeclarationSelector::byRecordId(DeclarationRecordId::fromString($recordId)),
+            $onlyReference => DeclarationSelector::byExternalReference(ExternalReference::fromString($reference)),
+            $onlyRecordId => DeclarationSelector::byRecordId(DeclarationRecordId::fromString($recordId)),
             default => throw new InvalidOptionException('Give one of --declaration or --record-id.'),
         };
     }
