@@ -92,3 +92,9 @@ Consequences).
 ## Process
 New decisions and deviations from the reference get an ADR `docs/adr/NNNN-<title>.md` (Context / Decision /
 Consequences), accepted by the lead before the code that implements them.
+
+## Amendment (2026-11-18, lead-accepted)
+
+- Infection `timeout` is 180 s instead of the reference 30 s, and `make infection` and the CI job fail when a mutant
+  is *skipped*: Infection never runs a mutant whose covering tests exceed the limit in total, while MSI still reads
+  100 %. The change makes the gate stricter (justified in `infection.json5`).
