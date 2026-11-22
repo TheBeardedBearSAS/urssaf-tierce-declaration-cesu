@@ -76,9 +76,15 @@ final class UrssafGatewayFactoryTest extends TestCase
         static::assertSame(['Accept', 'Authorization', 'Host', 'User-Agent'], $headers);
     }
 
+    /**
+     * create() runs on the real clock: the token answered here lives for a year, so it cannot expire while the quota is
+     * filled however slow the run is (Xdebug path coverage), and the stack never has to answer a second token request.
+     */
     public function testTheDefaultRateLimiterAllowsTheQuotaThenRefuses(): void
     {
-        $stack = self::stackWithEmptyAnswers();
+        $stack = Stacks::sandbox();
+        $stack->respond(200, '{"access_token": "fictitious-access-token-0001", "expires_in": 31536000}');
+        $stack->http->setDefaultResponse(new Response(200, [], ''));
         $gateway = UrssafGatewayFactory::create(
             $stack->transport(),
             $stack->credentials,

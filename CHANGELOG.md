@@ -22,6 +22,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Changed
 
+- `SlidingWindowRateLimiter` counts the calls per second (one entry per second holding its number of calls) instead of
+  keeping one instant per call: a check costs the number of distinct seconds in the window, no longer the number of
+  calls (filling the 2 500-call quota made about 3.1 million closure calls). Same quota, window and retry delay.
+- `BusinessErrorCatalogue::operations()` reads a table instead of a `match` over every `BusinessError` case (a chain of
+  up to 87 comparisons per call, made for every case of every classified description). Same result.
+- Both changes make `make coverage-branches` usable again: under Xdebug path coverage the cost of each executed branch
+  grows with the branches already executed in the process (it is not reset between tests), so these two hot spots
+  made the run quadratic: 3.5 to 6 h on CI (twice cancelled at the 6 h limit), about 42 min locally now (PAJE: 33 min
+  on the same machine).
 - Infection: no mutant may go unevaluated. `timeoutsAsEscaped` is on, and `make infection` and the CI job also fail on any "Timed Out" or "Syntax Errors" mutant; `--only-covering-test-cases` runs only the tests covering each mutant (no more load-dependent timeouts); three comparisons that produced unparsable mutants (`(a !== null) === b`) now use a named variable.
 - Infection: `timeout` raised from 30 s to 180 s, and `make infection` and the CI job fail when a mutant is skipped (Infection never runs a mutant whose covering tests exceed the limit, yet reports MSI 100 %).
 - Every source file now carries a copyright and `SPDX-License-Identifier: MIT` header, enforced by PHP CS Fixer
@@ -29,6 +38,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Fixed
 
+- Flaky `UrssafGatewayFactoryTest::testTheDefaultRateLimiterAllowsTheQuotaThenRefuses`: it runs on the real clock and,
+  under Xdebug, outlived the one-hour token, whose renewal found no token answer (`expires_in` missing). The token it
+  is given now lives for a year, so the test no longer depends on its duration.
 - Contract suite: `URSSAF_SANDBOX_TOKEN_URI` (and `URSSAF_SANDBOX_BASE_URI`) must now be an https URI and can no longer target
   the production host (`api.urssaf.fr`, case and trailing dot ignored). The sandbox client credentials are posted to the
   token URI, so a production value would have leaked them. Test tooling only, the published SDK is unchanged.

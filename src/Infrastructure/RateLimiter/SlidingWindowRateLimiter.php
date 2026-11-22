@@ -22,15 +22,16 @@ use TheBeardedBear\UrssafTierceDeclarationCesu\Domain\Shared\TenantId;
 /**
  * Non-blocking in-memory limiter of the global URSSAF quota (ADR 0011): at most $limit calls per tenant, all operations
  * together, in any sliding window of $windowSeconds (default 2 500 per 3 600 s, api-reference §1.1 (PDF §2.5)). Per process. Token
- * calls are not counted (the gateway never acquires for them). Call instants are kept at second precision; when the
- * limit is reached the retry delay is the time left until the oldest call leaves the window.
+ * calls are not counted (the gateway never acquires for them). Calls are counted per second (one entry per second
+ * holding the number of calls made in it, so a check costs the number of distinct seconds in the window, not the number
+ * of calls); when the limit is reached the retry delay is the time left until the oldest call leaves the window.
  */
 final class SlidingWindowRateLimiter implements RateLimiter
 {
     public const DEFAULT_LIMIT = 2500;
     public const DEFAULT_WINDOW_SECONDS = 3600;
 
-    /** @var array<string, array<int, int>> call instants (UNIX timestamps) per tenant identifier */
+    /** @var array<string, array<int, int>> calls per second (UNIX timestamp => count) per tenant identifier */
     private array $calls = [];
 
     /**
@@ -60,13 +61,17 @@ final class SlidingWindowRateLimiter implements RateLimiter
         $recent = array_filter(
             $this->calls[$tenantId->value()] ?? [],
             static fn(int $instant): bool => $instant > $windowStart,
+            \ARRAY_FILTER_USE_KEY,
         );
 
-        if (\count($recent) >= $this->limit) {
-            throw RateLimitExceeded::forOperation($operation, min([$now, ...$recent]) + $this->windowSeconds - $now);
+        if (array_sum($recent) >= $this->limit) {
+            throw RateLimitExceeded::forOperation(
+                $operation,
+                min([$now, ...array_keys($recent)]) + $this->windowSeconds - $now,
+            );
         }
 
-        $recent[] = $now;
+        $recent[$now] = ($recent[$now] ?? 0) + 1;
         $this->calls[$tenantId->value()] = $recent;
     }
 }
